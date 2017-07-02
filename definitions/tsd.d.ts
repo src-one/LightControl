@@ -1,0 +1,9 @@
+///<reference path="jquery/jquery.d.ts" />
+///<reference path="jqueryui/jqueryui.d.ts" />
+///<reference path="sync-p.d.ts"/>
+///<reference path="window.d.ts"/>
+///<reference path="error.d.ts"/>
+///<reference path="karma.d.ts"/>
+///<reference path="moment/moment.d.ts"/>
+///<reference path="../node_modules/reflect-metadata/reflect-metadata.d.ts" />
+///<reference path="../node_modules/rxjs/Rx.d.ts" />

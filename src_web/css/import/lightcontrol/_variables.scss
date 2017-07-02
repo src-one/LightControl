@@ -1,0 +1,14 @@
+$gray: #cccccc;
+
+// pre-injected Bootstrap default values
+$font-size-base: 14px;
+$font-size-large: ceil(($font-size-base * 1.25)); // ~18px
+$font-size-small: ceil(($font-size-base * 0.85)); // ~12px
+
+// Responsive Sizing Definitions
+$screen-mobile: 525px;
+$screen-mobile-min: $screen-mobile;
+$screen-mobile-max: ($screen-mobile - 1);
+
+// Timestamp (becomes actual unix timestamp in gulp build --env=prod)
+$timestamp: 1;

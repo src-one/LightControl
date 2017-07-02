@@ -1,0 +1,46 @@
+#!/bin/bash
+
+ENVIRONMENT=""
+
+for i in "$@"
+do
+case $i in
+    --upload|-u) TASK="upload"
+    shift ;;
+    dev) ENVIRONMENT="dev"
+    shift ;;
+    prod) ENVIRONMENT="prod"
+    shift ;;
+    *) ;;
+esac
+done
+
+case "${ENVIRONMENT}" in
+    dev)
+        npm start
+    ;;
+
+    prod)
+        npm run build
+        rm -rf ./data/**/*.map
+        rm -rf ./data/js/*.js
+        rm -rf ./data/css/*.css
+        rm -rf ./data/**/.DS_Store
+
+        if [ $TASK = "upload" ]; then
+            pio run -t uploadfs
+        fi
+    ;;
+
+    -h|--help|*)
+        echo -e "\033[0;32msrc-one.com - \033[0;34mLight-Controller\033[0m | build environment";
+        echo ""
+        echo -e "Usage: bin/start [environment] [--watch]";
+        echo ""
+        echo -e "bin/start dev \t\t build \033[1;34mdevelopment\033[0m environment";
+        echo -e "bin/start prod \t\t build \033[1;31mproduction\033[0m environment";
+        echo ""
+        echo -e "Options: ";
+        echo -e " -w, --watch \t automatically rebuild if file changes"
+    ;;
+esac

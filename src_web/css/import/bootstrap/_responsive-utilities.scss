@@ -1,0 +1,12 @@
+@import "import/variables";
+@import "import/bootstrap/mixins";
+
+// please take in mind, that xxs is working INSIDE of the xs-range
+@media (max-width: $screen-xs-min - 1) {
+    @include responsive-invisibility('.hidden-xxs');
+    @include make-grid(xxs);
+}
+
+@media (min-width: $screen-xs-min) {
+    @include responsive-visibility('.visible-xxs');
+}

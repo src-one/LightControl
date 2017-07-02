@@ -1,0 +1,3 @@
+interface ErrorConstructor {
+    stackTraceLimit: number;
+}
