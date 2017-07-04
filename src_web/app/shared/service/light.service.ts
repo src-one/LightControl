@@ -2,8 +2,8 @@ import {Injectable} from '@angular/core';
 import {Observable} from 'rxjs/Observable';
 import 'rxjs/add/operator/catch';
 import {Http} from '@angular/http';
-import {Channel} from './channel.model';
-import {Channels} from './channels.model';
+import {Channel} from '../../home/channel.model';
+import {Channels} from '../../home/channels.model';
 
 @Injectable()
 export class LightService {

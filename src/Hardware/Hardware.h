@@ -26,6 +26,8 @@ class Hardware
       void setYellowLed(bool enabled);
       void setYellowBlinkLed(float seconds);
 
+      void setFan(bool enabled);
+
       void setPWM(uint8_t channel, uint16_t value);
 
       void setBtnCallback(void (*func)(boolean state));
@@ -34,7 +36,7 @@ class Hardware
       void setChannel(int room, int channel, unsigned long value);
       String updateChannels();
 
-      void updateRelais();
+      void updateRelay();
       void updateOnInterrupt();
 
   private:
@@ -43,9 +45,13 @@ class Hardware
 
       Ticker _ticker_red;
       Ticker _ticker_yellow;
+      Ticker _ticker_relay_1;
+      Ticker _ticker_relay_2;
 
       static void _tick_red();
       static void _tick_yellow();
+      static void _tick_relay_1();
+      static void _tick_relay_2();
 
       void (*_btnCallback)(boolean state) = NULL;
 };

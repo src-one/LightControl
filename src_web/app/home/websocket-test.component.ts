@@ -35,11 +35,11 @@ export class WebsocketTestComponent implements OnInit {
                     if(channels.length > 0 && !this.lightState.isDragging) {
                         channels.map((channel) => {
                             const channelData = channel.split(',');
-                            //console.log(channelData);
+                            console.log(channelData);
                             this.lightState.channels[+channelData[0]][+channelData[1]] = +channelData[2];
                         });
                     } else {
-                        //console.log("skip");
+                        console.log("skip");
                     }
                 } catch (e) {
                     console.info(e);

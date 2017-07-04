@@ -9,14 +9,14 @@ import {routing} from './app.routing';
 import {createNewHosts, removeNgStyles} from '@angularclass/hmr';
 import {PreLoaderComponent} from './shared/core/preloader.component';
 import {HeaderNavigationComponent} from './shared/main/header-navigation.component';
-import {SliderComponent} from './home/slider.component';
-import {LightService} from './home/light.service';
 import {WebSocketService} from './shared/service/websocket.service';
 import {WebsocketTestComponent} from './home/websocket-test.component';
 import {WebsocketTestService} from './home/websocket-test.service';
 import {Filter} from './shared/helper/common-filter';
 import {ChannelComponent} from './home/channel.component';
 import {LightState} from './home/light.state';
+import {LightService} from './shared/service/light.service';
+import {SliderComponent} from './shared/widgets/slider.component';
 
 @NgModule({
     imports: [

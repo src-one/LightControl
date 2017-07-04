@@ -19,10 +19,15 @@ void Hardware::init()
     Serial.println("");
     //system_update_cpu_freq(SYS_CPU_160MHZ);
 
-    pinMode(RELAIS_1, OUTPUT);
-    pinMode(RELAIS_2, OUTPUT);
+    pinMode(RELAY_1, OUTPUT);
+    pinMode(RELAY_2, OUTPUT);
     pinMode(LED_YELLOW, OUTPUT);
     pinMode(LED_RED, OUTPUT);
+    pinMode(FAN, OUTPUT);
+
+    digitalWrite(RELAY_1, true);
+    digitalWrite(RELAY_2, true);
+    digitalWrite(FAN, false);
 
     pinMode(BTN, INPUT);
 
@@ -123,6 +128,13 @@ void Hardware::_tick_yellow() {
   digitalWrite(LED_YELLOW, !state);
 }
 
+// **************************** FAN ****************************
+
+void Hardware::setFan(bool enabled)
+{
+  digitalWrite(FAN, enabled);
+}
+
 // **************************** BTN ****************************
 
 boolean Hardware::isButtonPressed()
@@ -177,30 +189,54 @@ String ICACHE_FLASH_ATTR Hardware::updateChannels()
    return status;
 }
 
-boolean relais1 = false;
-boolean relais2 = false;
+// ************ RELAY *****************
 
-void ICACHE_FLASH_ATTR Hardware::updateRelais()
+boolean relay1 = false;
+boolean relay2 = false;
+
+void Hardware::_tick_relay_1() {
+  relay1 = false;
+  digitalWrite(RELAY_1, true);
+  digitalWrite(FAN, relay1 || relay2);
+}
+
+void Hardware::_tick_relay_2() {
+  relay2 = false;
+  digitalWrite(RELAY_2, true);
+  digitalWrite(FAN, relay1 || relay2);
+}
+
+void ICACHE_FLASH_ATTR Hardware::updateRelay()
 {
   if(channel[0][0] == 0 &&
      channel[0][1] == 0 &&
      channel[0][2] == 0 &&
      channel[0][3] == 0) {
-    relais1 = false;
+    relay1 = false;
+    _ticker_relay_1.detach();
+    _ticker_relay_1.once(5, &Hardware::_tick_relay_1);
    } else {
-    relais1 = true;
+    relay1 = true;
+   _ticker_relay_1.detach();
+    digitalWrite(RELAY_1, false);
+    digitalWrite(FAN, true);
    }
 
   if(channel[1][0] == 0 &&
      channel[1][1] == 0 &&
      channel[1][2] == 0 &&
      channel[1][3] == 0) {
-    relais2 = false;
+    relay2 = false;
+    _ticker_relay_2.detach();
+    _ticker_relay_2.once(5, &Hardware::_tick_relay_2);
    } else {
-    relais2 = true;
+   relay2 = true;
+   _ticker_relay_2.detach();
+    digitalWrite(RELAY_2, false);
+    digitalWrite(FAN, true);
    }
 
-  digitalWrite(RELAIS_1, !relais1);
-  digitalWrite(RELAIS_2, !relais2);
-  digitalWrite(LED_RED, !relais1 && !relais2);
+  //digitalWrite(RELAY_1, !relay1);
+  //digitalWrite(RELAY_2, !relay2);
+  digitalWrite(LED_RED, !relay1 && !relay2);
 }

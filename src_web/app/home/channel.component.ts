@@ -3,10 +3,10 @@ import {ObservableHandler} from '../shared/core/observable-handler';
 import {Channel} from './channel.model';
 import {ChannelDto} from './channel.dto';
 import {ObservablePending} from '../shared/core/observable-pending';
-import {LightService} from './light.service';
 import {Channels} from './channels.model';
 import {ChannelsDto} from './channels.dto';
 import {LightState} from './light.state';
+import {LightService} from '../shared/service/light.service';
 
 @Component({
     selector: 'channel',

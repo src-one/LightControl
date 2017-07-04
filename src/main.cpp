@@ -34,12 +34,12 @@ const char * hostName = "LightControl";
 bool debug = false;
 bool APMode = false;
 
-//const char* ssid = "FuckingAwesomeNet";
-//const char* password = "5bier10schnaps";
+const char* ssid = "FuckingAwesomeNet";
+const char* password = "5bier10schnaps";
 //const char* ssid = "reBuy.com";
 //const char* password = "reBuy@Schoeneberg!";
-const char* ssid = "FRITZ!Box 7490";
-const char* password = "10schnaps1bier";
+//const char* ssid = "FRITZ!Box 7490";
+//const char* password = "10schnaps1bier";
 
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(0x40);
 /*
@@ -85,14 +85,14 @@ void updateChannels(char payload[]) {
     unsigned long value = data["value"];
 
     hardware.setChannel(roomNum, channelNum, value);
-    Serial.printf("%d ; %d ; %d\n", roomNum, channelNum, value);
+    //Serial.printf("%d ; %d ; %d\n", roomNum, channelNum, value);
   }
 }
 
 void updateChannels() {
    String status = hardware.updateChannels();
 
-   webserver.ws.textAll(status);
+   //webserver.ws.textAll(status);
 }
 
 
@@ -166,7 +166,7 @@ public:
 protected:
     virtual void service() {
       updateChannels();
-      hardware.updateRelais();
+      hardware.updateRelay();
     }
 };
 
@@ -398,6 +398,7 @@ void setup() {
     });
 
     hardware.setYellowLed(true);
+    //hardware.setFan(true);
 }
 
 void loop() {
