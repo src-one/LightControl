@@ -169,19 +169,13 @@ void ICACHE_FLASH_ATTR Hardware::setChannel(int roomNum, int channelNum, unsigne
   channel[roomNum - 1][channelNum - 1] = value;
 }
 
-String ICACHE_FLASH_ATTR Hardware::updateChannels()
+void ICACHE_FLASH_ATTR Hardware::updateChannels()
 {
-  String status = "";
-
   for (uint8_t roomNum = 0; roomNum <  NUM_ROOMS; roomNum++) {
       for (uint8_t channelNum = 0; channelNum < NUM_CHANNELS; channelNum++ ) {
-        status += String(roomNum) + "," + channelNum + "," + channel[roomNum][channelNum] + ";";
-
         _pwm.setPWM((roomNum * NUM_CHANNELS) + channelNum, 0, channel[roomNum][channelNum]);
       }
    }
-
-   return status;
 }
 
 // **************************** RELAY ****************************

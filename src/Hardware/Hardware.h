@@ -39,7 +39,7 @@ class Hardware
       };
 
       void setChannel(int room, int channel, unsigned long value);
-      String updateChannels();
+      void updateChannels();
 
       void updateRelay();
       void updateOnInterrupt();
