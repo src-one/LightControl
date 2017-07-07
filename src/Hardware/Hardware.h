@@ -33,6 +33,11 @@ class Hardware
       void setBtnCallback(void (*func)(boolean state));
       boolean isButtonPressed();
 
+      unsigned long channel[NUM_ROOMS][NUM_CHANNELS] = {
+        {0, 0, 0, 0},
+        {0, 0, 0, 0}
+      };
+
       void setChannel(int room, int channel, unsigned long value);
       String updateChannels();
 

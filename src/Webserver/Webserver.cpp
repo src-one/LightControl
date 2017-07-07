@@ -9,7 +9,6 @@ void Webserver::init() {
   _attachFileServer();
 
   _attachApiSetChannelsEndpoint();
-  //_attachApiSetBarcodeEndpoint();
   _attachApiGetChannelsEndpoint();
 
   _attachApiGetHeapEndpoint();
@@ -22,7 +21,7 @@ void Webserver::init() {
 
 // ####################### Channels ########################
 
-void Webserver::onGetChannels(void (*func)(char payload[])) {
+void Webserver::onGetChannels(String (*func)(char payload[])) {
   _getChannelsCallback = func;
 }
 
@@ -51,8 +50,7 @@ void Webserver::_apiSetWebsocketText(String payload) {
 
 // ####################### Fileserver ########################
 
-void Webserver::_attachFileServer()
-{
+void Webserver::_attachFileServer() {
   server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
 
   server.onNotFound([](AsyncWebServerRequest *request) {
@@ -62,8 +60,7 @@ void Webserver::_attachFileServer()
 
 // ####################### Endpoints ########################
 
-void Webserver::_attachApiSetChannelsEndpoint()
-{
+void Webserver::_attachApiSetChannelsEndpoint() {
   server.on("/api/channel", HTTP_POST, [](AsyncWebServerRequest *request) {
     request->send(200, "text/json", "{}");
   },
@@ -116,29 +113,15 @@ void Webserver::_attachApiSetBarcodeEndpoint()
 }
 */
 
-void Webserver::_attachApiGetChannelsEndpoint()
-{
-  server.on("/api/channel", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/json", "{}");
-  },
+void Webserver::_attachApiGetChannelsEndpoint() {
+  server.on("/api/channels", HTTP_GET, [&](AsyncWebServerRequest *request) {
+    String result = "";
 
-  [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-  },
-
-  [&](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-    if(!index) {
-      memset(channelResultBuffer, 0, sizeof channelResultBuffer);
-      channelResultBufferPos = 0;
+    if(_getChannelsCallback != NULL) {
+      result = _getChannelsCallback("");
     }
 
-    for(size_t i = 0; i < len; i++) {
-      channelResultBuffer[channelResultBufferPos] = data[i];
-      channelResultBufferPos++;
-    }
-
-    if(index + len == total && _getChannelsCallback != NULL) {
-      _getChannelsCallback(channelResultBuffer);
-    }
+    request->send(200, "text/json", result);
   });
 }
 
@@ -149,8 +132,7 @@ void Webserver::_attachApiGetHeapEndpoint()
   });
 }
 
-void Webserver::_attachWebsocketListener()
-{
+void Webserver::_attachWebsocketListener() {
   /*
   onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len) {
     if(type == WS_EVT_CONNECT){

@@ -148,11 +148,6 @@ void Hardware::setBtnCallback(void (*func)(boolean state)) {
 
 // **************************** PWM ****************************
 
-unsigned long channel[NUM_ROOMS][NUM_CHANNELS] = {
-  {0, 0, 0, 0},
-  {0, 0, 0, 0}
-};
-
 int channelNum;
 
 void ICACHE_FLASH_ATTR Hardware::setPWM(uint8_t channel, uint16_t value)
@@ -189,7 +184,7 @@ String ICACHE_FLASH_ATTR Hardware::updateChannels()
    return status;
 }
 
-// ************ RELAY *****************
+// **************************** RELAY ****************************
 
 boolean relay1 = false;
 boolean relay2 = false;

@@ -7,7 +7,6 @@ import {HomeComponent} from './home/home.component';
 import {SettingsComponent} from './settings/settings.component';
 import {routing} from './app.routing';
 import {createNewHosts, removeNgStyles} from '@angularclass/hmr';
-import {PreLoaderComponent} from './shared/core/preloader.component';
 import {HeaderNavigationComponent} from './shared/main/header-navigation.component';
 import {WebSocketService} from './shared/service/websocket.service';
 import {WebsocketTestComponent} from './home/websocket-test.component';
@@ -17,6 +16,7 @@ import {ChannelComponent} from './home/channel.component';
 import {LightState} from './home/light.state';
 import {LightService} from './shared/service/light.service';
 import {SliderComponent} from './shared/widgets/slider.component';
+import {PreLoaderComponent} from './shared/widgets/preloader.component';
 
 @NgModule({
     imports: [

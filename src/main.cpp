@@ -42,6 +42,9 @@ const char* password = "5bier10schnaps";
 //const char* password = "10schnaps1bier";
 
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(0x40);
+
+//uint16_t channels[8] = { 0, 0, 0, 0, 0, 0 , 0, 0 };
+
 /*
 #define   MESH_PREFIX     "whateverYouLike"
 #define   MESH_PASSWORD   "somethingSneeky"
@@ -85,6 +88,7 @@ void updateChannels(char payload[]) {
     unsigned long value = data["value"];
 
     hardware.setChannel(roomNum, channelNum, value);
+    //channels[(roomNum * 4) + channelNum] = value;
     //Serial.printf("%d ; %d ; %d\n", roomNum, channelNum, value);
   }
 }
@@ -352,6 +356,21 @@ void onSetChannel(char data[]) {
   updatePWMTask();
 }
 
+String onGetChannels(char data[]) {
+  Serial.println("GetCurrentChannels:");
+
+  String status = "";
+
+  for (uint8_t roomNum = 0; roomNum <  NUM_ROOMS; roomNum++) {
+      for (uint8_t channelNum = 0; channelNum < NUM_CHANNELS; channelNum++ ) {
+        status += String(roomNum) + "," + channelNum + "," + hardware.channel[roomNum][channelNum] + ";";
+      }
+   }
+
+   //Serial.println("{\"data\":\"" + status + "\"}");
+   return "{\"data\":\"" + status + "\"}";
+}
+
 void setup() {
     hardware.init();
     hardware.setYellowBlinkLed(0.5);
@@ -375,6 +394,7 @@ void setup() {
     });
 
     webserver.onSetChannels(onSetChannel);
+    webserver.onGetChannels(onGetChannels);
 
     webserver.init();
 
@@ -394,7 +414,6 @@ void setup() {
     hardware.setBtnCallback([](boolean state) {
       Serial.println(String("Button ") + String(state ? "pressed!" : "released!"));
       Serial.println(hardware.isButtonPressed() ? "_pressed!" : "_released!");
-
     });
 
     hardware.setYellowLed(true);

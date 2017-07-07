@@ -53,6 +53,7 @@ export class ChannelComponent implements OnInit {
     private setChannelsStream = new EventEmitter<ChannelsDto>();
     public stream: ObservablePending<Channel>;
     public stream2: ObservablePending<Channels>;
+    public statusStream: ObservablePending<any>;
     public currentTab: number = 0;
 
     constructor(private lightService: LightService,
@@ -69,6 +70,13 @@ export class ChannelComponent implements OnInit {
             .setApi(data => this.lightService.setChannels(data.channels))
             .onPending(pending => this.stream2 = pending)
             .subscribe();
+        /*
+        ObservableHandler.take<Channels>(null, this)
+            .setApi(data => this.lightService.setChannels(data.channels))
+            .onPending(pending => this.stream2 = pending)
+            .subscribe();
+         */
+        this.getChannelData();
     }
 
     public onInteract(value: boolean) {
@@ -127,5 +135,30 @@ export class ChannelComponent implements OnInit {
         ];
 
         this.setChannelsStream.emit({channels});
+    }
+
+    private getChannelData(): void {
+        ObservableHandler.take<any>(null, this)
+            .setApi(() => this.lightService.getStatus())
+            .onPending((stream) => this.statusStream = stream)
+            .subscribe((message) => {
+                console.log(message);
+
+                const channels: string[] = message.data.split(';');
+
+                try {
+                    if(channels.length > 0 && !this.lightState.isDragging) {
+                        channels.map((channel) => {
+                            const channelData = channel.split(',');
+                            console.log(channelData);
+                            this.lightState.channels[+channelData[0]][+channelData[1]] = +channelData[2];
+                        });
+                    } else {
+                        console.log("skip");
+                    }
+                } catch (e) {
+                    console.info(e);
+                }
+            });
     }
 }

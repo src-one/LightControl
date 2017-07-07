@@ -17,7 +17,7 @@ class Webserver
 
     void init();
 
-    void onGetChannels(void (*func)(char payload[]));
+    void onGetChannels(String (*func)(char payload[]));
     void onSetChannels(void (*func)(char payload[]));
     void onSetWebsocketText(void (*func)(String payload));
 
@@ -27,7 +27,7 @@ class Webserver
 
   private:
     void _apiGetChannels(char payload[]);
-    void (*_getChannelsCallback)(char payload[]) = NULL;
+    String (*_getChannelsCallback)(char payload[]) = NULL;
 
     void _apiSetChannels(char payload[]);
     void (*_setChannelsCallback)(char payload[]) = NULL;
@@ -37,7 +37,6 @@ class Webserver
 
     void _attachFileServer();
     void _attachApiSetChannelsEndpoint();
-    //void _attachApiSetBarcodeEndpoint();
     void _attachApiGetChannelsEndpoint();
     void _attachApiGetHeapEndpoint();
     void _attachWebsocketListener();

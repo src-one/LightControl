@@ -26,15 +26,15 @@ export class LightService {
 
     public setChannels(channels: Channel[]): Observable<Channels> {
         /*
-        const payload: string = channels.map((entry) => {
-            return entry.room + '.' + entry.channel + '.' + entry.value;
-        }).join(';');
-        */
+         const payload: string = channels.map((entry) => {
+         return entry.room + '.' + entry.channel + '.' + entry.value;
+         }).join(';');
+         */
 
         const payload = channels;
         const params = {};
 
-        console.log(payload);
+        //console.log(payload);
 
         return this.http.post('/api/channel', payload, params)
             .map(response => new Channels(response.json()));
