@@ -27,9 +27,9 @@ import {LightService} from '../shared/service/light.service';
                 <slider
                         [min]="0"
                         [max]="4095"
-                        [value]="channel"
-                        (valueChange)="setChannel($event, roomNum, channelNum)"
-                        (onDrag)="setChannel($event, roomNum, channelNum)"
+                        [value]="channel.value"
+                        (valueChange)="setChannel($event, channel.room, channel.channel)"
+                        (onDrag)="setChannel($event, channel.room, channel.channel)"
                         (onInteract)="onInteract($event)">
                 </slider>
             </div>
@@ -94,14 +94,14 @@ export class ChannelComponent implements OnInit {
 
     public setCinemaMode() {
         const channels: Channel[] = [
-            new Channel({room: 1, channel: 1, value: 100}),
-            new Channel({room: 1, channel: 2, value: 512}),
-            new Channel({room: 1, channel: 3, value: 0}),
-            new Channel({room: 1, channel: 4, value: 512}),
-            new Channel({room: 2, channel: 1, value: 0}),
-            new Channel({room: 2, channel: 2, value: 0}),
-            new Channel({room: 2, channel: 3, value: 0}),
-            new Channel({room: 2, channel: 4, value: 0})
+            new Channel({room: 0, channel: 0, value: 100}),
+            new Channel({room: 0, channel: 1, value: 512}),
+            new Channel({room: 0, channel: 2, value: 0}),
+            new Channel({room: 0, channel: 3, value: 512}),
+            new Channel({room: 1, channel: 0, value: 0}),
+            new Channel({room: 1, channel: 1, value: 0}),
+            new Channel({room: 1, channel: 2, value: 0}),
+            new Channel({room: 1, channel: 3, value: 0})
         ];
 
         this.setChannelsStream.emit({channels});
@@ -109,14 +109,14 @@ export class ChannelComponent implements OnInit {
 
     public setPartyMode() {
         const channels: Channel[] = [
-            new Channel({room: 1, channel: 1, value: 2048}),
+            new Channel({room: 0, channel: 0, value: 2048}),
+            new Channel({room: 0, channel: 1, value: 0}),
+            new Channel({room: 0, channel: 2, value: 0}),
+            new Channel({room: 0, channel: 3, value: 0}),
+            new Channel({room: 1, channel: 0, value: 2048}),
+            new Channel({room: 1, channel: 1, value: 0}),
             new Channel({room: 1, channel: 2, value: 0}),
-            new Channel({room: 1, channel: 3, value: 0}),
-            new Channel({room: 1, channel: 4, value: 0}),
-            new Channel({room: 2, channel: 1, value: 2048}),
-            new Channel({room: 2, channel: 2, value: 0}),
-            new Channel({room: 2, channel: 3, value: 0}),
-            new Channel({room: 2, channel: 4, value: 0})
+            new Channel({room: 1, channel: 3, value: 0})
         ];
 
         this.setChannelsStream.emit({channels});
@@ -124,14 +124,14 @@ export class ChannelComponent implements OnInit {
 
     public setOff() {
         const channels: Channel[] = [
+            new Channel({room: 0, channel: 0, value: 0}),
+            new Channel({room: 0, channel: 1, value: 0}),
+            new Channel({room: 0, channel: 2, value: 0}),
+            new Channel({room: 0, channel: 3, value: 0}),
+            new Channel({room: 1, channel: 0, value: 0}),
             new Channel({room: 1, channel: 1, value: 0}),
             new Channel({room: 1, channel: 2, value: 0}),
-            new Channel({room: 1, channel: 3, value: 0}),
-            new Channel({room: 1, channel: 4, value: 0}),
-            new Channel({room: 2, channel: 1, value: 0}),
-            new Channel({room: 2, channel: 2, value: 0}),
-            new Channel({room: 2, channel: 3, value: 0}),
-            new Channel({room: 2, channel: 4, value: 0})
+            new Channel({room: 1, channel: 3, value: 0})
         ];
 
         this.setChannelsStream.emit({channels});
@@ -142,19 +142,23 @@ export class ChannelComponent implements OnInit {
             .setApi(() => this.lightService.getStatus())
             .onPending((stream) => this.statusStream = stream)
             .subscribe((message) => {
-                console.log(message);
+                //console.log(message);
 
-                const channels: string[] = message.data.split(';');
+                const channels: string[] = message.data.slice(0, -1).split(';');
 
                 try {
                     if(channels.length > 0 && !this.lightState.isDragging) {
                         channels.map((channel) => {
                             const channelData = channel.split(',');
-                            console.log(channelData);
-                            this.lightState.channels[+channelData[0]][+channelData[1]] = +channelData[2];
+                            //console.log(channelData);
+                            this.lightState.channels[+channelData[0]][+channelData[1]] = new Channel(<ChannelDto>{
+                                room: +channelData[0],
+                                channel: +channelData[1],
+                                value: +channelData[2],
+                            });
                         });
                     } else {
-                        console.log("skip");
+                        //console.log("skip");
                     }
                 } catch (e) {
                     console.info(e);

@@ -17,7 +17,7 @@ export class LightService {
 
     public setChannel(room: number, channel: number, value: number): Observable<Channel> {
         //const payload: string = room + '.' + channel + '.' + value;
-        const payload = {room: room + 1, channel: channel + 1, value: value};
+        const payload = {room: room, channel: channel, value: value};
         const params = {};
 
         return this.http.post('/api/channel', [payload], params)

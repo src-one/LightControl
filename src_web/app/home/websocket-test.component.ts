@@ -2,15 +2,19 @@ import {Component, OnInit} from '@angular/core';
 import {Subject} from 'rxjs/Rx';
 import {WebSocketService} from '../shared/service/websocket.service';
 import {LightState} from './light.state';
+import {Channel} from './channel.model';
+import {ChannelDto} from './channel.dto';
 
 @Component({
     selector: 'websocket-test',
     template: `
+        <!--
         <div class="container">
             websocket component loaded...
             <div>Sent Message: {{ sentMessage }}</div>
             <div>Recv Message: {{ message }}</div>
         </div>
+        -->
     `
 })
 export class WebsocketTestComponent implements OnInit {
@@ -27,19 +31,27 @@ export class WebsocketTestComponent implements OnInit {
     ngOnInit() {
         this.socket.subscribe(
             (message) => {
+                if(this.lightState.isDragging){
+                    return;
+                }
+
                 this.message = message.data;
 
-                const channels: string[] = this.message.split(';');
+                const channels: string[] = this.message.slice(0, -1).split(';');
 
                 try {
                     if(channels.length > 0 && !this.lightState.isDragging) {
                         channels.map((channel) => {
                             const channelData = channel.split(',');
-                            console.log(channelData);
-                            this.lightState.channels[+channelData[0]][+channelData[1]] = +channelData[2];
+                            //console.log(channelData);
+                            this.lightState.channels[+channelData[0]][+channelData[1]] = new Channel(<ChannelDto>{
+                                room: +channelData[0],
+                                channel: +channelData[1],
+                                value: +channelData[2],
+                            });
                         });
                     } else {
-                        console.log("skip");
+                        //console.log("skip");
                     }
                 } catch (e) {
                     console.info(e);

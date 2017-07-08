@@ -1,3 +1,4 @@
+#include <vector>
 #include <ESP8266WiFi.h>
 #include <DNSServer.h>
 #include <ArduinoOTA.h>
@@ -19,14 +20,18 @@
 #include "Hardware/Hardware.h"
 #include "Webserver/Webserver.h"
 
+#include "Upnp/fauxmoESP.h"
+
 //#include "Tasks.h"
 
 Hardware hardware;
 Webserver webserver;
 
+fauxmoESP fauxmo;
+
 #define ENABLE_DEBUG_OUTPUT true
 
-const char * hostName = "LightControl";
+const char * hostName = "lightcontrol";
 
 bool debug = false;
 bool APMode = false;
@@ -50,7 +55,7 @@ String onGetChannels(char data[]) {
    }
 
    //Serial.println("{\"data\":\"" + status + "\"}");
-   return "{\"data\":\"" + status + "\"}";
+   return status;
 }
 
 void updateChannels(char payload[]) {
@@ -98,6 +103,7 @@ public:
 protected:
     virtual void service() {
       hardware.tick();
+      fauxmo.handle();
     }
 };
 
@@ -330,7 +336,7 @@ void setup() {
       Serial.println("Error setting up MDNS responder!");
     }
 
-    Serial.println("Web-Server started");
+    Serial.println("Webserver started");
 
     attachTasks();
     sched.run();
@@ -338,6 +344,43 @@ void setup() {
     hardware.setBtnCallback([](boolean state) {
       Serial.println(String("Button ") + String(state ? "pressed!" : "released!"));
       Serial.println(hardware.isButtonPressed() ? "_pressed!" : "_released!");
+    });
+
+    fauxmo.addDevice("Oberlicht vorne");
+    fauxmo.addDevice("Oberlicht hinten");
+    fauxmo.addDevice("Oberlicht komplett");
+    fauxmo.addDevice("Kinobeleuchtung");
+    fauxmo.addDevice("Partybeleuchtung");
+
+    fauxmo.onMessage([](unsigned char device_id, const char * device_name, bool state) {
+        Serial.printf("[MAIN] Device #%d (%s) state: %s\n", device_id, device_name, state ? "ON" : "OFF");
+
+        if(device_id == 0) {
+          hardware.setChannel(0, 0, state ? 4095 : 0);
+        }
+
+        if(device_id == 1) {
+          hardware.setChannel(1, 0, state ? 4095 : 0);
+        }
+
+        if(device_id == 2) {
+          hardware.setChannel(0, 0, state ? 4095 : 0);
+          hardware.setChannel(1, 0, state ? 4095 : 0);
+        }
+
+        if(device_id == 3) {
+          hardware.setChannel(0, 0, state ? 100 : 0);
+          hardware.setChannel(1, 0, state ? 100 : 0);
+        }
+
+        if(device_id == 4) {
+          hardware.setChannel(0, 1, state ? 250 : 0);
+          hardware.setChannel(1, 1, state ? 250 : 0);
+          hardware.setChannel(0, 3, state ? 150 : 0);
+          hardware.setChannel(1, 3, state ? 150 : 0);
+        }
+        
+        updateChannelsTask();
     });
 
     hardware.setYellowLed(true);

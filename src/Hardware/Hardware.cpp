@@ -166,7 +166,7 @@ void ICACHE_FLASH_ATTR Hardware::setPWM(uint8_t channel, uint16_t value)
 
 void ICACHE_FLASH_ATTR Hardware::setChannel(int roomNum, int channelNum, unsigned long value)
 {
-  channel[roomNum - 1][channelNum - 1] = value;
+  channel[roomNum][channelNum] = value;
 }
 
 void ICACHE_FLASH_ATTR Hardware::updateChannels()

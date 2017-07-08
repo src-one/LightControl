@@ -121,7 +121,7 @@ void Webserver::_attachApiGetChannelsEndpoint() {
       result = _getChannelsCallback("");
     }
 
-    request->send(200, "text/json", result);
+    request->send(200, "text/json", "{\"data\":\"" + result + "\"}");
   });
 }
 
