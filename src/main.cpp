@@ -36,11 +36,11 @@ const char * hostName = "lightcontrol";
 bool debug = false;
 bool APMode = false;
 
-const char* ssid = "FuckingAwesomeNet";
-const char* password = "5bier10schnaps";
+//const char* ssid = "FuckingAwesomeNet";
+//const char* password = "5bier10schnaps";
 
-//const char* ssid = "FRITZ!Box 7490";
-//const char* password = "10schnaps1bier";
+const char* ssid = "FRITZ!Box 7490";
+const char* password = "10schnaps1bier";
 
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(0x40);
 
@@ -346,11 +346,12 @@ void setup() {
       Serial.println(hardware.isButtonPressed() ? "_pressed!" : "_released!");
     });
 
-    fauxmo.addDevice("Oberlicht vorne");
-    fauxmo.addDevice("Oberlicht hinten");
-    fauxmo.addDevice("Oberlicht komplett");
+    fauxmo.addDevice("vorderes Tageslicht");
+    fauxmo.addDevice("hinteres Tageslicht");
+    fauxmo.addDevice("komplettes Tageslicht");
     fauxmo.addDevice("Kinobeleuchtung");
     fauxmo.addDevice("Partybeleuchtung");
+    fauxmo.addDevice("komplette Beleuchtung");
 
     fauxmo.onMessage([](unsigned char device_id, const char * device_name, bool state) {
         Serial.printf("[MAIN] Device #%d (%s) state: %s\n", device_id, device_name, state ? "ON" : "OFF");
@@ -365,21 +366,48 @@ void setup() {
 
         if(device_id == 2) {
           hardware.setChannel(0, 0, state ? 4095 : 0);
+          hardware.setChannel(0, 1, 0);
+          hardware.setChannel(0, 2, 0);
+          hardware.setChannel(0, 3, 0);
           hardware.setChannel(1, 0, state ? 4095 : 0);
+          hardware.setChannel(1, 1, 0);
+          hardware.setChannel(1, 2, 0);
+          hardware.setChannel(1, 3, 0);
         }
 
         if(device_id == 3) {
           hardware.setChannel(0, 0, state ? 100 : 0);
+          hardware.setChannel(0, 1, 0);
+          hardware.setChannel(0, 2, 0);
+          hardware.setChannel(0, 3, 0);
           hardware.setChannel(1, 0, state ? 100 : 0);
+          hardware.setChannel(1, 1, 0);
+          hardware.setChannel(1, 2, 0);
+          hardware.setChannel(1, 3, 0);
         }
 
         if(device_id == 4) {
+          hardware.setChannel(0, 0, 0);
           hardware.setChannel(0, 1, state ? 250 : 0);
-          hardware.setChannel(1, 1, state ? 250 : 0);
+          hardware.setChannel(0, 2, 0);
           hardware.setChannel(0, 3, state ? 150 : 0);
+          hardware.setChannel(1, 0, 0);
+          hardware.setChannel(1, 1, state ? 250 : 0);
+          hardware.setChannel(1, 2, 0);
           hardware.setChannel(1, 3, state ? 150 : 0);
         }
-        
+
+        if(device_id == 5) {
+          hardware.setChannel(0, 0, state ? 4095 : 0);
+          hardware.setChannel(0, 1, state ? 4095 : 0);
+          hardware.setChannel(0, 2, state ? 4095 : 0);
+          hardware.setChannel(0, 3, state ? 4095 : 0);
+          hardware.setChannel(1, 0, state ? 4095 : 0);
+          hardware.setChannel(1, 1, state ? 4095 : 0);
+          hardware.setChannel(1, 2, state ? 4095 : 0);
+          hardware.setChannel(1, 3, state ? 4095 : 0);
+        }
+
         updateChannelsTask();
     });
 

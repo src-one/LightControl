@@ -95,10 +95,10 @@ export class ChannelComponent implements OnInit {
     public setCinemaMode() {
         const channels: Channel[] = [
             new Channel({room: 0, channel: 0, value: 100}),
-            new Channel({room: 0, channel: 1, value: 512}),
+            new Channel({room: 0, channel: 1, value: 0}),
             new Channel({room: 0, channel: 2, value: 0}),
-            new Channel({room: 0, channel: 3, value: 512}),
-            new Channel({room: 1, channel: 0, value: 0}),
+            new Channel({room: 0, channel: 3, value: 0}),
+            new Channel({room: 1, channel: 0, value: 100}),
             new Channel({room: 1, channel: 1, value: 0}),
             new Channel({room: 1, channel: 2, value: 0}),
             new Channel({room: 1, channel: 3, value: 0})
@@ -109,14 +109,14 @@ export class ChannelComponent implements OnInit {
 
     public setPartyMode() {
         const channels: Channel[] = [
-            new Channel({room: 0, channel: 0, value: 2048}),
-            new Channel({room: 0, channel: 1, value: 0}),
+            new Channel({room: 0, channel: 0, value: 0}),
+            new Channel({room: 0, channel: 1, value: 250}),
             new Channel({room: 0, channel: 2, value: 0}),
-            new Channel({room: 0, channel: 3, value: 0}),
-            new Channel({room: 1, channel: 0, value: 2048}),
-            new Channel({room: 1, channel: 1, value: 0}),
+            new Channel({room: 0, channel: 3, value: 150}),
+            new Channel({room: 1, channel: 0, value: 0}),
+            new Channel({room: 1, channel: 1, value: 250}),
             new Channel({room: 1, channel: 2, value: 0}),
-            new Channel({room: 1, channel: 3, value: 0})
+            new Channel({room: 1, channel: 3, value: 150})
         ];
 
         this.setChannelsStream.emit({channels});

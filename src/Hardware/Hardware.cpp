@@ -203,7 +203,7 @@ void ICACHE_FLASH_ATTR Hardware::updateRelay()
      channel[0][3] == 0) {
     relay1 = false;
     _ticker_relay_1.detach();
-    _ticker_relay_1.once(5, &Hardware::_tick_relay_1);
+    _ticker_relay_1.once(500, &Hardware::_tick_relay_1);
    } else {
     relay1 = true;
    _ticker_relay_1.detach();
