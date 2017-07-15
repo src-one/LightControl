@@ -203,7 +203,7 @@ void ICACHE_FLASH_ATTR Hardware::updateRelay()
      channel[0][3] == 0) {
     relay1 = false;
     _ticker_relay_1.detach();
-    _ticker_relay_1.once(500, &Hardware::_tick_relay_1);
+    _ticker_relay_1.once(60, &Hardware::_tick_relay_1);
    } else {
     relay1 = true;
    _ticker_relay_1.detach();
@@ -217,7 +217,7 @@ void ICACHE_FLASH_ATTR Hardware::updateRelay()
      channel[1][3] == 0) {
     relay2 = false;
     _ticker_relay_2.detach();
-    _ticker_relay_2.once(5, &Hardware::_tick_relay_2);
+    _ticker_relay_2.once(60, &Hardware::_tick_relay_2);
    } else {
    relay2 = true;
    _ticker_relay_2.detach();

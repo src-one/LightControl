@@ -1,0 +1,33 @@
+{
+  "pointsymbol": {
+    "1": "none",
+    "3": "none",
+    "2": "none",
+    "5": "none",
+    "4": "none",
+    "7": "none",
+    "6": "none",
+    "8": "none"
+  },
+  "state": {
+    "on": false,
+    "bri": 1,
+    "hue": 33864,
+    "sat": 200,
+    "effect": "none",
+    "xy": [
+      0.3297,
+      0.3433
+    ],
+    "ct": 178,
+    "alert": "none",
+    "colormode": "ct",
+    "reachable": true
+  },
+  "name": "Test 2",
+  "manufacturername": "Philips",
+  "type": "Extended color light",
+  "swversion": "5.50.1.19085",
+  "uniqueid": "00:17:88:01:00:ee:38:ac-0b",
+  "modelid": "LCT003"
+}

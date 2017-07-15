@@ -1,3 +1,31 @@
+/*
+
+FAUXMO ESP 2.0.0
+
+Copyright (C) 2016 by Xose Pérez <xose dot perez at gmail dot com>
+
+The MIT License (MIT)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+*/
+
 #ifndef FAUXMOESP_h
 #define FAUXMOESP_h
 
@@ -11,6 +39,8 @@
 
 #define UDP_RESPONSES_INTERVAL  250
 #define UDP_RESPONSES_TRIES     5
+
+#define DEBUG_FAUXMO            true
 
 const char UDP_TEMPLATE[] PROGMEM =
     "HTTP/1.1 200 OK\r\n"
@@ -46,44 +76,8 @@ const char HEADERS[] PROGMEM =
     "CONNECTION: close\r\n\r\n"
     "%s\r\n";
 
-/*
-const char UDP_TEMPLATE[] PROGMEM =
-    "HTTP/1.1 200 OK\r\n"
-    "CACHE-CONTROL: max-age=86400\r\n"
-    "DATE: Sun, 20 Nov 2016 00:00:00 GMT\r\n"
-    "EXT:\r\n"
-    "LOCATION: http://%s:%d/setup.xml\r\n"
-    "OPT: \"http://schemas.upnp.org/upnp/1/0/\"; ns=01\r\n"
-    "01-NLS: %s\r\n"
-    "SERVER: Unspecified, UPnP/1.0, Unspecified\r\n"
-    "ST: urn:Belkin:device:**\r\n"
-    "USN: uuid:Dimmer-1_0-%s::urn:Belkin:device:**\r\n\r\n";
-
-const char SETUP_TEMPLATE[] PROGMEM =
-    "<?xml version=\"1.0\"?>"
-    "<root><device>"
-      "<deviceType>urn:Belkin:device:dimmer:1</deviceType>"
-      "<friendlyName>%s</friendlyName>"
-      "<manufacturer>Belkin International Inc.</manufacturer>"
-      "<modelName>FauxmoESP</modelName>"
-      "<modelNumber>2.0.0</modelNumber>"
-      "<UDN>uuid:Dimmer-1_0-%s</UDN>"
-    "</device></root>";
-
-const char HEADERS[] PROGMEM =
-    "HTTP/1.1 200 OK\r\n"
-    "CONTENT-LENGTH: %d\r\n"
-    "CONTENT-TYPE: text/xml\r\n"
-    "DATE: Sun, 01 Jan 2017 00:00:00 GMT\r\n"
-    "LAST-MODIFIED: Sat, 01 Jan 2017 00:00:00 GMT\r\n"
-    "SERVER: Unspecified, UPnP/1.0, Unspecified\r\n"
-    "X-USER-AGENT: redsonic\r\n"
-    "CONNECTION: close\r\n\r\n"
-    "%s\r\n";
-*/
-
 #ifdef DEBUG_FAUXMO
-    #define DEBUG_MSG_FAUXMO(...) DEBUG_FAUXMO.printf( __VA_ARGS__ )
+    #define DEBUG_MSG_FAUXMO(...) Serial.printf( __VA_ARGS__ )
 #else
     #define DEBUG_MSG_FAUXMO(...)
 #endif

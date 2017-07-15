@@ -36,13 +36,16 @@ import {LightService} from '../shared/service/light.service';
         </div>
 
         <div class="row">
-            <div class="col-xs-4">
+            <div class="col-xs-3">
                 <button class="btn btn-primary btn-block" (click)="setCinemaMode()">Cinema</button>
             </div>
-            <div class="col-xs-4">
+            <div class="col-xs-3">
                 <button class="btn btn-info btn-block" (click)="setPartyMode()">Party</button>
             </div>
-            <div class="col-xs-4">
+            <div class="col-xs-3">
+                <button class="btn btn-success btn-block" (click)="setFancyMode()">Fancy</button>
+            </div>
+            <div class="col-xs-3">
                 <button class="btn btn-warning btn-block" (click)="setOff()">Off</button>
             </div>
         </div>
@@ -70,12 +73,6 @@ export class ChannelComponent implements OnInit {
             .setApi(data => this.lightService.setChannels(data.channels))
             .onPending(pending => this.stream2 = pending)
             .subscribe();
-        /*
-        ObservableHandler.take<Channels>(null, this)
-            .setApi(data => this.lightService.setChannels(data.channels))
-            .onPending(pending => this.stream2 = pending)
-            .subscribe();
-         */
         this.getChannelData();
     }
 
@@ -84,12 +81,7 @@ export class ChannelComponent implements OnInit {
     }
 
     public setChannel(value: number, room: number, channel: number) {
-        //console.log(room, channel, value);
-        //const _value: number = Math.round(this.filter.map(value, 0, 200, 0, 4095));
-        //this.lightState.channels[room + '.' + channel] = new Channel({ room: room, channel: channel, value: _value });
-
         this.setChannelStream.emit({room, channel, value: value});
-        //this.setChannelStream.emit({room, channel, value: _value});
     }
 
     public setCinemaMode() {
@@ -122,6 +114,21 @@ export class ChannelComponent implements OnInit {
         this.setChannelsStream.emit({channels});
     }
 
+    public setFancyMode() {
+        const channels: Channel[] = [
+            new Channel({room: 0, channel: 0, value: 0}),
+            new Channel({room: 0, channel: 1, value: 564}),
+            new Channel({room: 0, channel: 2, value: 0}),
+            new Channel({room: 0, channel: 3, value: 4095}),
+            new Channel({room: 1, channel: 0, value: 0}),
+            new Channel({room: 1, channel: 1, value: 4095}),
+            new Channel({room: 1, channel: 2, value: 138}),
+            new Channel({room: 1, channel: 3, value: 1967})
+        ];
+
+        this.setChannelsStream.emit({channels});
+    }
+
     public setOff() {
         const channels: Channel[] = [
             new Channel({room: 0, channel: 0, value: 0}),
@@ -142,8 +149,6 @@ export class ChannelComponent implements OnInit {
             .setApi(() => this.lightService.getStatus())
             .onPending((stream) => this.statusStream = stream)
             .subscribe((message) => {
-                //console.log(message);
-
                 const channels: string[] = message.data.slice(0, -1).split(';');
 
                 try {

@@ -1,3 +1,7 @@
+#define ENABLE_DEBUG_OUTPUT true
+#define DEBUG_FAUXMO true
+#define DEBUG_HUE true
+
 #include <vector>
 #include <ESP8266WiFi.h>
 #include <DNSServer.h>
@@ -20,6 +24,7 @@
 #include "Hardware/Hardware.h"
 #include "Webserver/Webserver.h"
 
+#include "Upnp/hueESP.h"
 #include "Upnp/fauxmoESP.h"
 
 //#include "Tasks.h"
@@ -27,20 +32,19 @@
 Hardware hardware;
 Webserver webserver;
 
+hueESP hue;
 fauxmoESP fauxmo;
-
-#define ENABLE_DEBUG_OUTPUT true
 
 const char * hostName = "lightcontrol";
 
 bool debug = false;
 bool APMode = false;
 
-//const char* ssid = "FuckingAwesomeNet";
-//const char* password = "5bier10schnaps";
+const char* ssid = "FuckingAwesomeNet";
+const char* password = "5bier10schnaps";
 
-const char* ssid = "FRITZ!Box 7490";
-const char* password = "10schnaps1bier";
+//const char* ssid = "FRITZ!Box 7490";
+//const char* password = "10schnaps1bier";
 
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(0x40);
 
@@ -103,7 +107,8 @@ public:
 protected:
     virtual void service() {
       hardware.tick();
-      fauxmo.handle();
+      hue.handle();
+      //fauxmo.handle();
     }
 };
 
@@ -346,25 +351,24 @@ void setup() {
       Serial.println(hardware.isButtonPressed() ? "_pressed!" : "_released!");
     });
 
-    fauxmo.addDevice("vorderes Tageslicht");
-    fauxmo.addDevice("hinteres Tageslicht");
-    fauxmo.addDevice("komplettes Tageslicht");
-    fauxmo.addDevice("Kinobeleuchtung");
-    fauxmo.addDevice("Partybeleuchtung");
-    fauxmo.addDevice("komplette Beleuchtung");
+    hue.addDevice("LightControl Bridge");
 
+    hue.onMessage([](unsigned char device_id, const char * device_name, bool state) {
+        Serial.printf("[MAIN] Device #%d (%s) state: %s\n", device_id, device_name, state ? "ON" : "OFF");
+    });
+
+    //fauxmo.addDevice("vorderes Tageslicht");
+    //fauxmo.addDevice("hinteres Tageslicht");
+    //fauxmo.addDevice("Kinobeleuchtung");
+    //fauxmo.addDevice("Kinobeleuchtung");
+    //fauxmo.addDevice("Partybeleuchtung");
+    //fauxmo.addDevice("ganze Beleuchtung");
+    //fauxmo.addDevice("coole Atmosphäre");
+/*
     fauxmo.onMessage([](unsigned char device_id, const char * device_name, bool state) {
         Serial.printf("[MAIN] Device #%d (%s) state: %s\n", device_id, device_name, state ? "ON" : "OFF");
 
         if(device_id == 0) {
-          hardware.setChannel(0, 0, state ? 4095 : 0);
-        }
-
-        if(device_id == 1) {
-          hardware.setChannel(1, 0, state ? 4095 : 0);
-        }
-
-        if(device_id == 2) {
           hardware.setChannel(0, 0, state ? 4095 : 0);
           hardware.setChannel(0, 1, 0);
           hardware.setChannel(0, 2, 0);
@@ -375,7 +379,7 @@ void setup() {
           hardware.setChannel(1, 3, 0);
         }
 
-        if(device_id == 3) {
+        if(device_id == 1) {
           hardware.setChannel(0, 0, state ? 100 : 0);
           hardware.setChannel(0, 1, 0);
           hardware.setChannel(0, 2, 0);
@@ -386,7 +390,7 @@ void setup() {
           hardware.setChannel(1, 3, 0);
         }
 
-        if(device_id == 4) {
+        if(device_id == 2) {
           hardware.setChannel(0, 0, 0);
           hardware.setChannel(0, 1, state ? 250 : 0);
           hardware.setChannel(0, 2, 0);
@@ -397,7 +401,7 @@ void setup() {
           hardware.setChannel(1, 3, state ? 150 : 0);
         }
 
-        if(device_id == 5) {
+        if(device_id == 3) {
           hardware.setChannel(0, 0, state ? 4095 : 0);
           hardware.setChannel(0, 1, state ? 4095 : 0);
           hardware.setChannel(0, 2, state ? 4095 : 0);
@@ -408,9 +412,20 @@ void setup() {
           hardware.setChannel(1, 3, state ? 4095 : 0);
         }
 
+        if(device_id == 4) {
+          hardware.setChannel(0, 0, state ? 0 : 0);
+          hardware.setChannel(0, 1, state ? 564 : 0);
+          hardware.setChannel(0, 2, state ? 0 : 0);
+          hardware.setChannel(0, 3, state ? 4095 : 0);
+          hardware.setChannel(1, 0, state ? 0 : 0);
+          hardware.setChannel(1, 1, state ? 4095 : 0);
+          hardware.setChannel(1, 2, state ? 138 : 0);
+          hardware.setChannel(1, 3, state ? 1976 : 0);
+        }
+
         updateChannelsTask();
     });
-
+*/
     hardware.setYellowLed(true);
 }
 
