@@ -1,7 +1,7 @@
 #ifndef HUEESP_h
 #define HUEESP_h
 
-#define HUE_DEFAULT_TCP_BASE_PORT   8178
+#define HUE_DEFAULT_TCP_BASE_PORT   80
 #define HUE_UDP_MULTICAST_IP        IPAddress(239,255,255,250)
 #define HUE_UDP_MULTICAST_PORT      1900
 #define HUE_TCP_MAX_CLIENTS         10
@@ -145,6 +145,8 @@ const char HUE_HEADERS[] PROGMEM =
 #include <ESPAsyncWebServer.h>
 #include <Hash.h>
 #include <ESPAsyncTCP.h>
+#include <AsyncJson.h>
+#include <ArduinoJson.h>
 #include <WiFiUdp.h>
 #include <functional>
 #include <vector>
@@ -166,16 +168,16 @@ class hueESP {
         hueESP(unsigned int port = HUE_DEFAULT_TCP_BASE_PORT);
         void addDevice(const char * device_name);
         void onMessage(TStateFunction fn) { _callback = fn; }
-        void enable(bool enable);
         void handle();
 
     private:
-        bool _enabled = true;
         unsigned int _base_port = HUE_DEFAULT_TCP_BASE_PORT;
         std::vector<hueesp_device_t> _devices;
         WiFiUDP _udp;
         TStateFunction _callback = NULL;
 
+        bool _enabled = true;
+        char * _uuid;
         unsigned int _roundsLeft = 0;
         unsigned int _current = 0;
         unsigned long _lastTick;
@@ -183,10 +185,11 @@ class hueESP {
         unsigned int _remotePort;
 
         String _getValue(String data, char separator, int index);
+        void _attachApi(unsigned int port);
         void _sendUDPResponse(unsigned int device_id);
         void _nextUDPResponse();
         void _handleUDPPacket(const IPAddress remoteIP, unsigned int remotePort, uint8_t *data, size_t len);
-        void _handleSetup(AsyncWebServerRequest *request, unsigned int device_id);
+        void _handleSetup(AsyncWebServerRequest *request);
         void _handleContent(AsyncWebServerRequest *request, unsigned int device_id, char * content);
 
 };

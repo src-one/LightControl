@@ -1,112 +1,237 @@
-#include <vector>
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
+#include <vector>
 #include "hueESP.h"
 
+int wildcmp(const char *wild, const char *string) {
+  const char *cp = NULL, *mp = NULL;
+
+  while ((*string) && (*wild != '*')) {
+    if ((*wild != *string) && (*wild != '?')) {
+      return 0;
+    }
+    wild++;
+    string++;
+  }
+
+  while (*string) {
+    if (*wild == '*') {
+      if (!*++wild) {
+        return 1;
+      }
+      mp = wild;
+      cp = string + 1;
+    } else if ((*wild == *string) || (*wild == '?')) {
+      wild++;
+      string++;
+    } else {
+      wild = mp;
+      string = cp++;
+    }
+  }
+
+  while (*wild == '*') {
+    wild++;
+  }
+
+  return !*wild;
+}
+
+void printRequestDetails(AsyncWebServerRequest *request) {
+  if (request->method() == HTTP_GET)
+    Serial.printf("GET");
+  else if (request->method() == HTTP_POST)
+    Serial.printf("POST");
+  else if (request->method() == HTTP_DELETE)
+    Serial.printf("DELETE");
+  else if (request->method() == HTTP_PUT)
+    Serial.printf("PUT");
+  else if (request->method() == HTTP_PATCH)
+    Serial.printf("PATCH");
+  else if (request->method() == HTTP_HEAD)
+    Serial.printf("HEAD");
+  else if (request->method() == HTTP_OPTIONS)
+    Serial.printf("OPTIONS");
+  else
+    Serial.printf("UNKNOWN");
+  Serial.printf(" http://%s%s\n", request->host().c_str(), request->url().c_str());
+
+  if (request->contentLength()) {
+    Serial.printf("_CONTENT_TYPE: %s\n", request->contentType().c_str());
+    Serial.printf("_CONTENT_LENGTH: %u\n", request->contentLength());
+  }
+
+  int headers = request->headers();
+  int i;
+
+  for (i = 0; i < headers; i++) {
+    AsyncWebHeader *h = request->getHeader(i);
+    Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+  }
+
+  int params = request->params();
+
+  for (i = 0; i < params; i++) {
+    AsyncWebParameter *p = request->getParam(i);
+    if (p->isFile()) {
+      Serial.printf("_FILE[%s]: %s, size: %u\n", p->name().c_str(), p->value().c_str(), p->size());
+    } else if (p->isPost()) {
+      Serial.printf("_POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
+    } else {
+      Serial.printf("_GET[%s]: %s\n", p->name().c_str(), p->value().c_str());
+    }
+  }
+
+  if (request->hasParam("body", true)) {
+    AsyncWebParameter *body = request->getParam("body", true);
+
+    String message = body->value().c_str();
+    Serial.print("MESSAGE: ");
+    Serial.println(message);
+  }
+}
+
+bool matchLightState(AsyncWebServerRequest *request) {
+  return wildcmp("/api/*/lights/*/state", request->url().c_str());
+}
+
+bool matchNewLights(AsyncWebServerRequest *request) {
+  return wildcmp("/api/*/lights/new", request->url().c_str());
+}
+
+bool matchLight(AsyncWebServerRequest *request) {
+  return wildcmp("/api/*/lights/*", request->url().c_str());
+}
+
+bool matchLights(AsyncWebServerRequest *request) {
+  return wildcmp("/api/*/lights", request->url().c_str());
+}
+
+bool matchScenes(AsyncWebServerRequest *request) {
+  return wildcmp("/api/*/scenes", request->url().c_str());
+}
+
+bool matchGroups(AsyncWebServerRequest *request) {
+  return wildcmp("/api/*/groups", request->url().c_str());
+}
+
+bool matchSensors(AsyncWebServerRequest *request) {
+  return wildcmp("/api/*/sensors", request->url().c_str());
+}
+
+bool matchRules(AsyncWebServerRequest *request) {
+  return wildcmp("/api/*/rules", request->url().c_str());
+}
+
+bool matchSchedules(AsyncWebServerRequest *request) {
+  return wildcmp("/api/*/schedules", request->url().c_str());
+}
+
+bool matchConfig(AsyncWebServerRequest *request) {
+  return wildcmp("/api/config", request->url().c_str()) ||
+         wildcmp("/api/*/config", request->url().c_str());
+}
+
+bool matchApi(AsyncWebServerRequest *request) {
+  return wildcmp("/api", request->url().c_str()) ||
+         wildcmp("/api/*", request->url().c_str());
+}
+
 void hueESP::_sendUDPResponse(unsigned int device_id) {
-    hueesp_device_t device = _devices[device_id];
-    DEBUG_MSG_HUE("[HUE] UDP response for device #%d (%s)\n", _current, device.name);
+  hueesp_device_t device = _devices[device_id];
+  DEBUG_MSG_HUE("[HUE] UDP response for device #%d (%s)\n", _current, "LightControl Bridge");
 
-    char buffer[16];
-    IPAddress ip = WiFi.localIP();
-    sprintf(buffer, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+  char buffer[16];
+  IPAddress ip = WiFi.localIP();
+  sprintf(buffer, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 
-    char response[strlen(HUE_UDP_TEMPLATE) + 40];
-/*
-    sprintf_P(response, UDP_TEMPLATE,
-        buffer,
-        _base_port + _current,
-        device.uuid,
-        device.uuid
-    );
-*/
-    sprintf_P(response, HUE_UDP_TEMPLATE,
-        buffer,
-        _base_port + _current
-    );
+  char response[strlen(HUE_UDP_TEMPLATE) + 40];
+  /*
+      sprintf_P(response, UDP_TEMPLATE,
+          buffer,
+          _base_port + _current,
+          device.uuid,
+          device.uuid
+      );
+  */
+  sprintf_P(response, HUE_UDP_TEMPLATE, buffer, _base_port + _current);
 
-    _udp.beginPacket(_remoteIP, _remotePort);
-    _udp.write(response);
-    _udp.endPacket();
-
+  _udp.beginPacket(_remoteIP, _remotePort);
+  _udp.write(response);
+  _udp.endPacket();
 }
 
 void hueESP::_nextUDPResponse() {
-    while (_roundsLeft) {
-        if (_devices[_current].hit == false) break;
-        if (++_current == _devices.size()) {
-            --_roundsLeft;
-            _current = 0;
-        }
+  while (_roundsLeft) {
+    if (_devices[_current].hit == false)
+      break;
+    if (++_current == _devices.size()) {
+      --_roundsLeft;
+      _current = 0;
     }
+  }
 
-    if (_roundsLeft > 0) {
-        _sendUDPResponse(_current);
-        if (++_current == _devices.size()) {
-            --_roundsLeft;
-            _current = 0;
-        }
+  if (_roundsLeft > 0) {
+    _sendUDPResponse(_current);
+    if (++_current == _devices.size()) {
+      --_roundsLeft;
+      _current = 0;
     }
+  }
 }
 
 void hueESP::_handleUDPPacket(IPAddress remoteIP, unsigned int remotePort, uint8_t *data, size_t len) {
-    if (!_enabled) return;
+  if (!_enabled)
+    return;
 
-    data[len] = 0;
+  data[len] = 0;
 
-    if (strstr((char *) data, HUE_UDP_SEARCH_PATTERN) == (char *) data) {
-        //DEBUG_MSG_HUE("[HUE] Search request from %s\n", (char *) data);
+  if (strstr((char *)data, HUE_UDP_SEARCH_PATTERN) == (char *)data) {
+    // DEBUG_MSG_HUE("[HUE] Search request from %s\n", (char *) data);
 
-        if (strstr((char *) data, HUE_UDP_DEVICE_PATTERN) != NULL) {
-            #ifdef DEBUG_HUE
-                char buffer[16];
-                sprintf(buffer, "%d.%d.%d.%d", remoteIP[0], remoteIP[1], remoteIP[2], remoteIP[3]);
-                DEBUG_MSG_HUE("[HUE] Search request from %s\n", buffer);
-            #endif
+    if (strstr((char *)data, HUE_UDP_DEVICE_PATTERN) != NULL) {
+      #ifdef DEBUG_HUE
+        char buffer[16];
+        sprintf(buffer, "%d.%d.%d.%d", remoteIP[0], remoteIP[1], remoteIP[2], remoteIP[3]);
+        DEBUG_MSG_HUE("[HUE] Search request from %s\n", buffer);
+      #endif
 
-            // Set hits to false
-            for (unsigned int i = 0; i < _devices.size(); i++) {
-                _devices[i].hit = false;
-            }
+      // Set hits to false
+      for (unsigned int i = 0; i < _devices.size(); i++) {
+        _devices[i].hit = false;
+      }
 
-            // Send responses
-            _remoteIP = remoteIP;
-            _remotePort = remotePort;
-            _current = random(0, _devices.size());
-            _roundsLeft = HUE_UDP_RESPONSES_TRIES;
-
-        }
+      // Send responses
+      _remoteIP = remoteIP;
+      _remotePort = remotePort;
+      _current = random(0, _devices.size());
+      _roundsLeft = HUE_UDP_RESPONSES_TRIES;
     }
-
+  }
 }
 
-void hueESP::_handleSetup(AsyncWebServerRequest *request, unsigned int device_id) {
-    if (!_enabled) return;
+void hueESP::_handleSetup(AsyncWebServerRequest *request) {
+  if (!_enabled)
+    return;
 
-    DEBUG_MSG_HUE("[HUE] Device #%d /description.xml\n", device_id);
-    _devices[device_id].hit = true;
+  DEBUG_MSG_HUE("[HUE] Device /description.xml\n");
+  char buffer[16];
 
-    hueesp_device_t device = _devices[device_id];
+  IPAddress ip = WiFi.localIP();
+  sprintf(buffer, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 
-    char buffer[16];
-    IPAddress ip = WiFi.localIP();
-    sprintf(buffer, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+  char _response[strlen(HUE_2015_SETUP_TEMPLATE) + 50];
+  sprintf_P(_response, HUE_2015_SETUP_TEMPLATE, buffer, _base_port, "LightControl Bridge", _uuid);
 
-    char _response[strlen(HUE_2015_SETUP_TEMPLATE) + 50];
-    sprintf_P(_response, HUE_2015_SETUP_TEMPLATE,
-            buffer,
-            _base_port + _current,
-            device.name,
-            device.uuid);
+  DEBUG_MSG_HUE("[HUE] Setup Response #%d\n", _response);
 
-    DEBUG_MSG_HUE("[HUE] Setup Response #%d\n", _response);
-
-    AsyncWebServerResponse *response = request->beginResponse(200, "application/xml", _response);
-    response->addHeader("Cache-Control","no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
-    request->send(response);
+  AsyncWebServerResponse *response = request->beginResponse(200, "application/xml", _response);
+  response->addHeader( "Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+  request->send(response);
 }
-
-void hueESP::_handleContent(AsyncWebServerRequest *request, unsigned int device_id, char * content) {
+/*
+void hueESP::_handleContent(AsyncWebServerRequest *request, unsigned int
+device_id, char * content) {
     if (!_enabled) return;
 
     DEBUG_MSG_HUE("[HUE] Device #%d /upnp/control/basicevent1\n", device_id);
@@ -119,274 +244,412 @@ void hueESP::_handleContent(AsyncWebServerRequest *request, unsigned int device_
     if (strstr(content, "<BinaryState>1</BinaryState>") != NULL) {
         if (_callback) _callback(device_id, device.name, true);
     }
-
 }
+*/
 
 String hueESP::_getValue(String data, char separator, int index) {
   int found = 0;
   int strIndex[] = {0, -1};
   int maxIndex = data.length() - 1;
 
-  for(int i=0; i <= maxIndex && found <= index; i++){
-    if(data.charAt(i) == separator || i == maxIndex){
-        found++;
-        strIndex[0] = strIndex[1] + 1;
-        strIndex[1] = (i == maxIndex) ? i + 1 : i;
+  for (int i = 0; i <= maxIndex && found <= index; i++) {
+    if (data.charAt(i) == separator || i == maxIndex) {
+      found++;
+      strIndex[0] = strIndex[1] + 1;
+      strIndex[1] = (i == maxIndex) ? i + 1 : i;
     }
   }
 
-  return found>index ? data.substring(strIndex[0], strIndex[1]) : "";
+  return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
-void hueESP::addDevice(const char * device_name) {
-    hueesp_device_t new_device;
-    unsigned int device_id = _devices.size();
+void hueESP::_attachApi(unsigned int port) {
+  // TCP Server
+  AsyncWebServer * server = new AsyncWebServer(port);
 
-    // Copy name
-    new_device.name = strdup(device_name);
+  server->on("/description.xml", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    DEBUG_MSG_HUE("[HUE] serving device description XML\n");
+    _handleSetup(request);
+  });
+  /*
+      new_device.server->on("/upnp/control/basicevent1", HTTP_POST,
+          [](AsyncWebServerRequest *request) {
+              request->send(200);
+          },
+          NULL,
+          [this, device_id](AsyncWebServerRequest *request, uint8_t *data,
+     size_t len, size_t index, size_t total) {
+              data[len] = 0;
+              _handleContent(request, device_id, (char *) data);
+          }
+      );
+  */
+  server->on("index.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    DEBUG_MSG_HUE("[HUE] index.html\n");
+    request->send(SPIFFS, "/index.html");
+  });
 
-    // Create UUID
-    char uuid[15];
-    sprintf(uuid, "444556%06X%02X\0", ESP.getChipId(), device_id); // "DEV" + CHIPID + DEV_ID
-    new_device.uuid = strdup(uuid);
+  server->on("/favicon.ico", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    DEBUG_MSG_HUE("[HUE] favicon.ico\n");
+    request->send(SPIFFS, "/images/favicon.ico");
+  });
 
-    // TCP Server
-    new_device.server = new AsyncWebServer(_base_port + device_id);
-    new_device.server->on("/setup.xml", HTTP_GET, [this, device_id](AsyncWebServerRequest *request){
-        DEBUG_MSG_HUE("[HUE] serving device description XML\n");
-        _handleSetup(request, device_id);
-    });
-    new_device.server->on("/description.xml", HTTP_GET, [this, device_id](AsyncWebServerRequest *request){
-        DEBUG_MSG_HUE("[HUE] serving device description XML\n");
-        _handleSetup(request, device_id);
-    });
-    new_device.server->on("/upnp/control/basicevent1", HTTP_POST,
-        [](AsyncWebServerRequest *request) {
-            request->send(200);
-        },
-        NULL,
-        [this, device_id](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-            data[len] = 0;
-            _handleContent(request, device_id, (char *) data);
-        }
-    );
+  // /api/*/lights/*/state
+  server->on("/api", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    DEBUG_MSG_HUE("[HUE] serving /lights/*/state endpoint\n");
 
-    new_device.server->on("index.html", HTTP_GET, [this, device_id](AsyncWebServerRequest *request){
-        DEBUG_MSG_HUE("[HUE] serving index.html endpoint\n");
-        request->send(SPIFFS, "/index.html");
-    });
+    hueesp_device_t device = _devices[0];
 
-    new_device.server->on("/api/h3oQSBivbQZk9XRG4IlIvx1Rb9kdy54qBqpFIwUw/config", HTTP_GET, [this, device_id](AsyncWebServerRequest *request){
-        DEBUG_MSG_HUE("[HUE] serving /scenes endpoint\n");
+    if (device.state == true) {
+      DEBUG_MSG_HUE("[HUE] serving /lights/* ON State\n");
+      request->send(SPIFFS, "/hueLightsResponseOn.json", "application/json");
+    } else {
+      DEBUG_MSG_HUE("[HUE] serving /lights/* OFF State\n");
+      request->send(SPIFFS, "/hueLightsResponseOff.json", "application/json");
+    }
+  }).setFilter(matchLightState);
 
-        request->send(SPIFFS, "/hueBridgeScenes.min.json", "application/json");
-    });
+  // /api/*/lights/new
+  server->on("/api", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    DEBUG_MSG_HUE("[HUE] serving /lights/new endpoint\n");
 
-    new_device.server->on("/api/h3oQSBivbQZk9XRG4IlIvx1Rb9kdy54qBqpFIwUw/scenes/3T2SvsxvwteNNys", HTTP_GET, [this, device_id](AsyncWebServerRequest *request){
-        DEBUG_MSG_HUE("[HUE] serving /scenes/3T2SvsxvwteNNys endpoint\n");
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{}");
+    response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+    request->send(response);
+  }).setFilter(matchNewLights);
 
-        request->send(SPIFFS, "/hueBridgeScene1.min.json", "application/json");
-    });
+  // /api/*/lights/*
+  server->on("/api", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    DEBUG_MSG_HUE("[HUE] serving /lights/* endpoint\n");
 
-    new_device.server->on("/api/h3oQSBivbQZk9XRG4IlIvx1Rb9kdy54qBqpFIwUw/scenes", HTTP_GET, [this, device_id](AsyncWebServerRequest *request){
-        DEBUG_MSG_HUE("[HUE] serving /scenes endpoint\n");
+    hueesp_device_t device = _devices[0];
+    String command = String(request->url().c_str());
 
-        request->send(SPIFFS, "/hueBridgeScenes.min.json", "application/json");
-    });
+    Serial.println(String("CHANNEL:\t") + _getValue(command, '/', 4));
 
-    new_device.server->on("/api/h3oQSBivbQZk9XRG4IlIvx1Rb9kdy54qBqpFIwUw/lights/2/state", HTTP_GET, [this, device_id](AsyncWebServerRequest *request){
-        DEBUG_MSG_HUE("[HUE] serving /lights/2/state endpoint\n");
+    if (device.state == true) {
+      DEBUG_MSG_HUE("[HUE] serving /lights/* ON State\n");
+      request->send(SPIFFS, "/hueLightsResponseOn.json", "application/json");
+    } else {
+      DEBUG_MSG_HUE("[HUE] serving /lights/* OFF State\n");
+      request->send(SPIFFS, "/hueLightsResponseOff.json", "application/json");
+    }
+  }).setFilter(matchLight);
 
-        hueesp_device_t device = _devices[device_id];
+  // /api/*/lights
+  server->on("/api", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    DEBUG_MSG_HUE("[HUE] serving /lights endpoint\n");
+    request->send(SPIFFS, "/hueLightsConfig.min.json", "application/json");
+  }).setFilter(matchLights);
 
-        if(device.state == true) {
-          DEBUG_MSG_HUE("[HUE] serving /lights/2 ON State\n");
-          request->send(SPIFFS, "/hueLightsResponseOn.json", "application/json");
-        } else {
-          DEBUG_MSG_HUE("[HUE] serving /lights/2 OFF State\n");
-          request->send(SPIFFS, "/hueLightsResponseOff.json", "application/json");
-        }
-    });
+    // /api/config /api/*/config
+  server->on("/api", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    DEBUG_MSG_HUE("[HUE] serving /config endpoint\n");
 
-    new_device.server->on("/api/h3oQSBivbQZk9XRG4IlIvx1Rb9kdy54qBqpFIwUw/lights/2", HTTP_GET, [this, device_id](AsyncWebServerRequest *request){
-        DEBUG_MSG_HUE("[HUE] serving /lights/2 endpoint\n");
+    AsyncJsonResponse * response = new AsyncJsonResponse();
+    //response->addHeader("Server","ESP Async Web Server");
+    JsonObject& root = response->getRoot();
+/*
+    {
+    	"name": "Philips hue",
+    	"datastoreversion": "61",
+    	"swversion": "1705121051",
+    	"apiversion": "1.19.0",
+    	"mac": "00:17:88:4e:bc:ea",
+    	"bridgeid": "001788FFFE4EBCEA",
+    	"factorynew": false,
+    	"replacesbridgeid": null,
+    	"modelid": "BSB002",
+    	"starterkitid": ""
+    }
+*/
+/*
+    root["name"] = "Philips hue";
+    root["datastoreversion"] = "61";
+    root["swversion"] = "1705121051";
+    root["apiversion"] = "1.19.0";
+    root["mac"] = String(WiFi.macAddress());
+    root["bridgeid"] = "001788FFFE4EBCEB";
+    root["factorynew"] = false;
+    root["replacesbridgeid"] = "";
+    root["modelid"] = "BSB002";
+    root["starterkitid"] = "";
+    response->setLength();
+    request->send(response);
+*/
+    request->send(SPIFFS, "/hueBridgeConfig.min.json", "application/json");
+  }).setFilter(matchConfig);
 
-        hueesp_device_t device = _devices[device_id];
+  // /api/*/scenes
+  server->on("/api", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    DEBUG_MSG_HUE("[HUE] serving /scenes endpoint\n");
 
-        if(device.state == true) {
-          DEBUG_MSG_HUE("[HUE] serving /lights/2 ON State\n");
-          request->send(SPIFFS, "/hueLightsResponseOn.json", "application/json");
-        } else {
-          DEBUG_MSG_HUE("[HUE] serving /lights/2 OFF State\n");
-          request->send(SPIFFS, "/hueLightsResponseOff.json", "application/json");
-        }
-    });
+    request->send(SPIFFS, "/hueBridgeScenes.min.json", "application/json");
+  }).setFilter(matchScenes);
 
-    new_device.server->on("/api/h3oQSBivbQZk9XRG4IlIvx1Rb9kdy54qBqpFIwUw/lights", HTTP_GET, [this, device_id](AsyncWebServerRequest *request){
-        DEBUG_MSG_HUE("[HUE] serving /lights endpoint\n");
+  // /api/*/groups
+  server->on("/api", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    DEBUG_MSG_HUE("[HUE] serving /groups endpoint\n");
 
-        request->send(SPIFFS, "/hueLightsConfig.min.json", "application/json");
-    });
+    request->send(SPIFFS, "/hueBridgeGroups.min.json", "application/json");
+  }).setFilter(matchGroups);
 
-    new_device.server->on("/api/h3oQSBivbQZk9XRG4IlIvx1Rb9kdy54qBqpFIwUw", HTTP_GET, [this, device_id](AsyncWebServerRequest *request){
-        DEBUG_MSG_HUE("[HUE] serving /api endpoint\n");
+  // /api/*/sensors
+  server->on("/api", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    DEBUG_MSG_HUE("[HUE] serving /sensors endpoint\n");
 
-        request->send(SPIFFS, "/hueBridgeFullConfig.min.json", "application/json");
-    });
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{}");
+    response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+    request->send(response);
+  }).setFilter(matchSensors);
 
-    //new_device.server->serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
+  // /api/*/rules
+  server->on("/api", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    DEBUG_MSG_HUE("[HUE] serving /rules endpoint\n");
 
-    new_device.server->onNotFound([this, device_id](AsyncWebServerRequest *request){
-      Serial.printf("NOT_FOUND: ");
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{}");
+    response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+      request->send(response);
+    }).setFilter(matchRules);
 
-      if(request->method() == HTTP_GET)
-        Serial.printf("GET");
-      else if(request->method() == HTTP_POST)
-        Serial.printf("POST");
-      else if(request->method() == HTTP_DELETE)
-        Serial.printf("DELETE");
-      else if(request->method() == HTTP_PUT)
-        Serial.printf("PUT");
-      else if(request->method() == HTTP_PATCH)
-        Serial.printf("PATCH");
-      else if(request->method() == HTTP_HEAD)
-        Serial.printf("HEAD");
-      else if(request->method() == HTTP_OPTIONS)
-        Serial.printf("OPTIONS");
-      else
-        Serial.printf("UNKNOWN");
-      Serial.printf(" http://%s%s\n", request->host().c_str(), request->url().c_str());
+  // /api/*/schedules
+  server->on("/api", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    DEBUG_MSG_HUE("[HUE] serving /schedules endpoint\n");
 
-      if(request->contentLength()){
-        Serial.printf("_CONTENT_TYPE: %s\n", request->contentType().c_str());
-        Serial.printf("_CONTENT_LENGTH: %u\n", request->contentLength());
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{}");
+      response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+      request->send(response);
+    }).setFilter(matchSchedules);
+
+  // /api/*
+  server->on("/api", HTTP_GET, [this](AsyncWebServerRequest *request) {
+    DEBUG_MSG_HUE("[HUE] serving /api endpoint\n");
+
+    request->send(SPIFFS, "/hueBridgeFullConfig.min.json", "application/json");
+  }).setFilter(matchApi);
+
+  // /api/*/lights/*/state
+  server->on("/api", HTTP_PUT, [this](AsyncWebServerRequest *request) {
+    DEBUG_MSG_HUE("[HUE] /api PUT request:\n");
+
+    printRequestDetails(request);
+
+    hueesp_device_t device = _devices[0];
+
+    if (request->hasParam("body", true)) {
+      Serial.println("\n#### COMMAND:");
+      AsyncWebParameter *body = request->getParam("body", true);
+
+      String message = body->value().c_str();
+      Serial.println("MESSAGE:");
+      Serial.println(message);
+
+      StaticJsonBuffer<1500> jsonBuffer;
+      JsonObject &root = jsonBuffer.parseObject(message);
+
+      String command = String(request->url().c_str());
+      Serial.println(String("CHANNEL:\t") + _getValue(command, '/', 4));
+
+      if (root.containsKey("on")) {
+        boolean state = root["on"].as<boolean>();
+        Serial.println("STATE:\t\t" + String(state ? "true" : "false"));
+        device.state = state;
       }
 
-      int headers = request->headers();
-      int i;
-      for(i=0;i<headers;i++){
-        AsyncWebHeader* h = request->getHeader(i);
-        Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+      if (root.containsKey("sat")) {
+        int sat = root["sat"].as<int>();
+        Serial.println("SAT:\t\t" + String(sat));
+        // device.saturation = sat;
       }
 
-      int params = request->params();
-      for(i=0;i<params;i++){
-        AsyncWebParameter* p = request->getParam(i);
-        if(p->isFile()){
-          Serial.printf("_FILE[%s]: %s, size: %u\n", p->name().c_str(), p->value().c_str(), p->size());
-        } else if(p->isPost()){
-          Serial.printf("_POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
-        } else {
-          Serial.printf("_GET[%s]: %s\n", p->name().c_str(), p->value().c_str());
-        }
+      if (root.containsKey("hue")) {
+        int hue = root["hue"].as<int>();
+        Serial.println("HUE:\t\t" + String(hue));
+        // device.hue = hue;
       }
 
-      //request->send(404);
-
-      if(request->method() == HTTP_PUT && request->hasParam("body", true)) {
-        hueesp_device_t device = _devices[device_id];
-
-        Serial.println("\n#### COMMAND:");
-
-        String command = String(request->url().c_str());
-        AsyncWebParameter* body = request->getParam("body", true);
-        /*
-        char sz[100];
-        strcpy(sz, request->url().c_str());
-        char *_command = sz;
-
-        char *str;
-        while ((str = strtok_r(_command, "/", &_command)) != NULL) {
-           Serial.println(String("part: ") + str);
-        }
-        */
-        Serial.println(_getValue(command, '/', 2));
-        Serial.println(_getValue(command, '/', 3));
-        Serial.println(_getValue(command, '/', 4));
-        Serial.println(_getValue(command, '/', 5));
-        Serial.println(_getValue(command, '/', 6));
-
-        if(_getValue(command, '/', 1) == "api")
-          Serial.println(String("API: ") + _getValue(command, '/', 2));
-
-        if(_getValue(command, '/', 3) == "lights")
-          Serial.println(String("ID: ") + _getValue(command, '/', 4));
-
-        //Serial.println(_p->value().c_str());
-
-        const char* message = body->value().c_str();
-        Serial.println("MESSAGE:");
-        Serial.println(message);
-
-        if (strcmp(message, "{\"on\": true}") == 0) {
-          Serial.println("SWITCH ON");
-          device.state = true;
-        }
-
-        if (strcmp(message, "{\"on\": false}") == 0) {
-          Serial.println("SWITCH OFF");
-          device.state = false;
-        }
-
-        if (strcmp(message, "{\"on\": true,\"bri\":127}") == 0) {
-          Serial.println("DIM 50%");
-          device.brightness = 127;
-        }
-
-        DEBUG_MSG_HUE("\n[HUE] serving request handling endpoint\n");
-        ///AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "[{"success": {"on": false}}, {"success": {"bri": 0}}]");
-        //AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "[{\"success\": {\"on\": true}}]");
-        AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "[{\"success\": " + String(message) + "}]");
-        response->addHeader("Cache-Control","no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
-        request->send(response);
-
-        Serial.println("\n#### END COMMAND ####\n\n");
-      } else {
-        DEBUG_MSG_HUE("[HUE] serving fallback endpoint\n");
-
-        AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{}");
-        response->addHeader("Cache-Control","no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
-        request->send(response);
-        //request->send(404);
+      if (root.containsKey("bri")) {
+        int brightness = root["bri"].as<int>();
+        Serial.println("BRIGHTNESS:\t\t" + String(brightness));
+        device.brightness = brightness;
       }
-    });
 
-    new_device.server->begin();
+      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "[{\"success\": " + String(message) + "}]");
+      response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+      request->send(response);
+    }
+  },
+  NULL,
+  [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+    if (index + len == total) {
+      DEBUG_MSG_HUE("[HUE] Body Data: %s\n", data);
 
-    // Attach
-    _devices.push_back(new_device);
+      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "[{\"success\": true}]");
+      response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+      request->send(response);
+    }
+  }).setFilter(matchLightState);
 
-    DEBUG_MSG_HUE("[HUE] Device '%s' added (#%d)\n", device_name, device_id);
+  // api/*/groups
+  server->on("/api", HTTP_POST, [](AsyncWebServerRequest *request) {
+      DEBUG_MSG_HUE("[HUE] /api/*/groups POST request:\n");
+
+      printRequestDetails(request);
+
+      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "[{\"success\":{\"id\":\"1\"}}]");
+      response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+      request->send(response);
+    },
+    NULL,
+    [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+      if (index + len == total) {
+       DEBUG_MSG_HUE("[HUE] JSON request: %s\n", data);
+
+       AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "[{\"success\":{\"id\":\"1\"}}]");
+       response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+       request->send(response);
+      }
+    }).setFilter(matchGroups);
+
+  // api/*/scenes
+  server->on("/api", HTTP_POST, [](AsyncWebServerRequest *request) {
+    DEBUG_MSG_HUE("[HUE] /api/*/scenes POST request:\n");
+
+    printRequestDetails(request);
+
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "[{\"success\":{\"id\":\"1\"}}]");
+    response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+    request->send(response);
+  },
+  NULL,
+  [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+    if (index + len == total) {
+      DEBUG_MSG_HUE("[HUE] request: %s\n", data);
+
+      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "[{\"success\":{\"id\":\"1\"}}]");
+      response->addHeader("Cache-Control","no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+      request->send(response);
+    }
+  }).setFilter(matchScenes);
+
+  // /api
+  server->on("/api", HTTP_POST, [](AsyncWebServerRequest *request) {
+    DEBUG_MSG_HUE("[HUE] /api POST request:\n");
+
+    printRequestDetails(request);
+
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "[{\"success\":{\"username\": \"all\"}}]");
+    response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+    request->send(response);
+  },
+  NULL,
+  [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+    if (index + len == total) {
+      DEBUG_MSG_HUE("[HUE] request: %s\n", data);
+      DEBUG_MSG_HUE("[HUE] sending: %s\n", "[{\"success\":{\"username\": \"api\"}}]");
+
+      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "[{\"success\":{\"username\": \"all\"}}]");
+      response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+      request->send(response);
+    }
+  });
+
+  // new_device.server->serveStatic("/", SPIFFS,
+  // "/").setDefaultFile("index.html");
+
+  server->onNotFound([this](AsyncWebServerRequest *request) {
+    hueesp_device_t device = _devices[0];
+
+    printRequestDetails(request);
+
+    String command = String(request->url().c_str());
+
+    Serial.println(_getValue(command, '/', 2));
+    Serial.println(_getValue(command, '/', 3));
+    Serial.println(_getValue(command, '/', 4));
+    Serial.println(_getValue(command, '/', 5));
+    Serial.println(_getValue(command, '/', 6));
+
+    String message = "";
+
+    if (request->hasParam("body", true)) {
+      Serial.println("\n#### COMMAND:");
+      AsyncWebParameter *body = request->getParam("body", true);
+
+      message = body->value().c_str();
+      Serial.println("MESSAGE:");
+      Serial.println(message);
+    }
+
+    String _command = "";
+
+    if (request->method() == HTTP_PUT && request->hasParam("body", true)) {
+      DEBUG_MSG_HUE("\n[HUE] serving request handling endpoint\n");
+
+      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "[{\"success\": " + String(message) + "}]");
+      response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+      request->send(response);
+
+      Serial.println("\n#### END COMMAND ####\n\n");
+    } else {
+      DEBUG_MSG_HUE("[HUE] serving fallback endpoint\n");
+
+      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{}");
+      response->addHeader("Cache-Control","no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+      request->send(response);
+      // request->send(404);
+    }
+  });
+
+  server->begin();
+}
+
+void hueESP::addDevice(const char *device_name) {
+  hueesp_device_t new_device;
+  unsigned int device_id = _devices.size();
+
+  // Copy name
+  new_device.name = strdup(device_name);
+
+  // Create UUID
+  char uuid[15];
+  sprintf(uuid, "444556%06X%02X\0", ESP.getChipId(), device_id); // "DEV" + CHIPID + DEV_ID
+  new_device.uuid = strdup(uuid);
+
+  // Attach
+  _devices.push_back(new_device);
+
+  DEBUG_MSG_HUE("[HUE] Device '%s' added (#%d)\n", device_name, device_id);
 }
 
 void hueESP::handle() {
-    int len = _udp.parsePacket();
-    if (len > 0) {
-        IPAddress remoteIP = _udp.remoteIP();
-        unsigned int remotePort = _udp.remotePort();
-        uint8_t data[len];
-        _udp.read(data, len);
-        _handleUDPPacket(remoteIP, remotePort, data, len);
+  int len = _udp.parsePacket();
+  if (len > 0) {
+    IPAddress remoteIP = _udp.remoteIP();
+    unsigned int remotePort = _udp.remotePort();
+    uint8_t data[len];
+    _udp.read(data, len);
+    _handleUDPPacket(remoteIP, remotePort, data, len);
+  }
+
+  if (_roundsLeft > 0) {
+    if (millis() - _lastTick > HUE_UDP_RESPONSES_INTERVAL) {
+      _lastTick = millis();
+      _nextUDPResponse();
     }
-
-    if (_roundsLeft > 0) {
-        if (millis() - _lastTick > HUE_UDP_RESPONSES_INTERVAL) {
-            _lastTick = millis();
-            _nextUDPResponse();
-        }
-    }
-
-}
-
-void hueESP::enable(bool enable) {
-    DEBUG_MSG_HUE("[HUE] %s\n", enable ? "Enabled" : "Disabled");
-    _enabled = enable;
+  }
 }
 
 hueESP::hueESP(unsigned int port) {
-    _base_port = port;
+  _base_port = port;
 
-    // UDP Server
-    _udp.beginMulticast(WiFi.localIP(), HUE_UDP_MULTICAST_IP, HUE_UDP_MULTICAST_PORT);
+  // Create Bridge UUID
+  char uuid[15];
+  sprintf(uuid, "444556%06X\0", ESP.getChipId()); // "DEV" + CHIPID
+  _uuid = strdup(uuid);
 
+  _attachApi(_base_port);
+
+  // UDP Server
+  _udp.beginMulticast(WiFi.localIP(), HUE_UDP_MULTICAST_IP, HUE_UDP_MULTICAST_PORT);
 }

@@ -245,6 +245,8 @@ void connectWiFi() {
 
   delay(2000);
 
+  int connectingRetries = 20;
+
   if(hardware.isButtonPressed()) {
     Serial.println("Begin WiFi Smart Config");
 
@@ -258,6 +260,15 @@ void connectWiFi() {
     while(WiFi.status() != WL_CONNECTED) {
       delay(500);
       Serial.print(".");
+
+      if(connectingRetries == 0) {
+        Serial.println("Restarting System, due to limit of WiFi connecting retries");
+
+        ESP.restart();
+        delay(1000);
+      }
+
+      connectingRetries --;
 
       if(WiFi.smartConfigDone()) {
         Serial.println("WiFi Smart Config Done.");
@@ -289,6 +300,14 @@ void connectWiFi() {
     while (WiFi.status() != WL_CONNECTED) {
       delay(500);
       Serial.print(".");
+
+      if(connectingRetries == 0) {
+        Serial.println("Restarting System, due to limit of WiFi connecting retries");
+
+        ESP.restart();
+      }
+
+      connectingRetries --;
     }
 
     Serial.println("");

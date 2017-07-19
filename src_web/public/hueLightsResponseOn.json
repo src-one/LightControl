@@ -10,7 +10,7 @@
     "8": "none"
   },
   "state": {
-    "on": on,
+    "on": true,
     "bri": 255,
     "hue": 33864,
     "sat": 200,
@@ -25,9 +25,9 @@
     "reachable": true
   },
   "name": "Test 2",
-  "manufacturername": "Philips",
+  "modelid": "LCT010",
   "type": "Extended color light",
-  "swversion": "5.50.1.19085",
-  "uniqueid": "00:17:88:01:00:ee:38:ac-0b",
-  "modelid": "LCT003"
+  "manufacturername": "Philips",
+  "uniqueid": "00:17:88:01:02:34:3c:ef-0b",
+  "swversion": "6601820"
 }
