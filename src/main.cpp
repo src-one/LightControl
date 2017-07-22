@@ -25,15 +25,17 @@
 #include "Webserver/Webserver.h"
 
 #include "Upnp/hueESP.h"
-#include "Upnp/fauxmoESP.h"
+//#include "Upnp/fauxmoESP.h"
+
+#include "helper/CrossFader.h"
 
 //#include "Tasks.h"
 
 Hardware hardware;
 Webserver webserver;
 
-hueESP hue;
-fauxmoESP fauxmo;
+hueESP hue(webserver.server);
+//fauxmoESP fauxmo;
 
 const char * hostName = "lightcontrol";
 
@@ -264,8 +266,7 @@ void connectWiFi() {
       if(connectingRetries == 0) {
         Serial.println("Restarting System, due to limit of WiFi connecting retries");
 
-        ESP.restart();
-        delay(1000);
+        ESP.reset();
       }
 
       connectingRetries --;
@@ -304,7 +305,7 @@ void connectWiFi() {
       if(connectingRetries == 0) {
         Serial.println("Restarting System, due to limit of WiFi connecting retries");
 
-        ESP.restart();
+        ESP.reset();
       }
 
       connectingRetries --;
@@ -370,10 +371,31 @@ void setup() {
       Serial.println(hardware.isButtonPressed() ? "_pressed!" : "_released!");
     });
 
-    hue.addDevice("LightControl Bridge");
+    hue.setBridgeName("LightControl Bridge");
+    hue.addDevice("Decke vorne");
+    hue.addDevice("Decke hinten");
 
-    hue.onMessage([](unsigned char device_id, const char * device_name, bool state) {
-        Serial.printf("[MAIN] Device #%d (%s) state: %s\n", device_id, device_name, state ? "ON" : "OFF");
+    hue.onChangeDevice([](unsigned char deviceId, bool state, rgbwcolor color) {
+        Serial.printf("[MAIN] Device #%d", deviceId);
+        Serial.printf(" STATE: %d", (state ? "on" : "off"));
+        Serial.printf(" RGBW: %d %d %d %d\n", color.r, color.g, color.b, color.w);
+
+        if(deviceId == 1 || deviceId == 2) {
+
+          if(state) {
+            hardware.setChannel(deviceId - 1, 0, map(color.r, 0, 254, 0, 4095));
+            hardware.setChannel(deviceId - 1, 1, map(color.g, 0, 254, 0, 4095));
+            hardware.setChannel(deviceId - 1, 2, map(color.b, 0, 254, 0, 4095));
+            hardware.setChannel(deviceId - 1, 3, map(color.w, 0, 254, 0, 4095));
+          } else {
+            hardware.setChannel(deviceId - 1, 0, 0);
+            hardware.setChannel(deviceId - 1, 1, 0);
+            hardware.setChannel(deviceId - 1, 2, 0);
+            hardware.setChannel(deviceId - 1, 3, 0);
+          }
+
+          updateChannelsTask();
+        }
     });
 
     //fauxmo.addDevice("vorderes Tageslicht");
@@ -383,6 +405,7 @@ void setup() {
     //fauxmo.addDevice("Partybeleuchtung");
     //fauxmo.addDevice("ganze Beleuchtung");
     //fauxmo.addDevice("coole Atmosphäre");
+
 /*
     fauxmo.onMessage([](unsigned char device_id, const char * device_name, bool state) {
         Serial.printf("[MAIN] Device #%d (%s) state: %s\n", device_id, device_name, state ? "ON" : "OFF");

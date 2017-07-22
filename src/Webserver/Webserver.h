@@ -21,7 +21,8 @@ class Webserver
     void onSetChannels(void (*func)(char payload[]));
     void onSetWebsocketText(void (*func)(String payload));
 
-    AsyncWebServer server = AsyncWebServer(8080);
+    //AsyncWebServer server = AsyncWebServer(8080);
+    AsyncWebServer * server = new AsyncWebServer(80);
     AsyncWebSocket ws = AsyncWebSocket("/ws");
     AsyncEventSource events = AsyncEventSource("/events");
 

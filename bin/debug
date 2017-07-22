@@ -1,0 +1,3 @@
+#!/bin/bash
+
+java -jar bin/EspStackTraceDecoder.jar .pio_home/packages/toolchain-xtensa/bin/xtensa-lx106-elf-addr2line .pioenvs/nodemcuv2/firmware.elf stacktrace.txt

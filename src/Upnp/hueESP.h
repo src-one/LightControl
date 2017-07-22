@@ -45,47 +45,7 @@ const char HUE_UDP_BROADCAST_TEMPLATE[] PROGMEM =
     "NT: uuid:2f402f80-da50-11e1-9b23-001788101fe2"
     "USN: uuid:2f402f80-da50-11e1-9b23-001788101fe2";
 
-
-const char HUE_SETUP_TEMPLATE[] PROGMEM =
-  "<?xml version=\"1.0\"?>"
-  "<root xmlns=\"urn:schemas-upnp-org:device-1-0\">"
-    "<specVersion>"
-      "<major>1</major>"
-      "<minor>0</minor>"
-    "</specVersion>"
-    "<URLBase>http://%s:%d/</URLBase>"
-    "<device>"
-      "<deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType>"
-      "<friendlyName>Alexa Hue Bridge</friendlyName>"
-      "<manufacturer>Royal Philips Electronics</manufacturer>"
-      "<manufacturerURL>http://www.philips.com</manufacturerURL>"
-      "<modelDescription>Philips hue Personal Wireless Lighting</modelDescription>"
-      "<modelName>Philips hue bridge 2012</modelName>"
-      "<modelNumber>929000226503</modelNumber>"
-      "<modelURL>http://www.meethue.com</modelURL>"
-      "<serialNumber>001788101fe2</serialNumber>"
-      "<UDN>uuid:b4eeb628-680e-11e7-9c2c-6c4008b0d85e</UDN>"
-      "<presentationURL>index.html</presentationURL>"
-      "<iconList>"
-        "<icon>"
-          "<mimetype>image/png</mimetype>"
-          "<height>48</height>"
-          "<width>48</width>"
-          "<depth>24</depth>"
-          "<url>hue_logo_0.png</url>"
-        "</icon>"
-        "<icon>"
-          "<mimetype>image/png</mimetype>"
-          "<height>120</height>"
-          "<width>120</width>"
-          "<depth>24</depth>"
-          "<url>hue_logo_3.png</url>"
-        "</icon>"
-      "</iconList>"
-    "</device>"
-  "</root>";
-
-  const char HUE_2015_SETUP_TEMPLATE[] PROGMEM =
+  const char HUE_SETUP_TEMPLATE[] PROGMEM =
     "<?xml version=\"1.0\"?>"
     "<root xmlns=\"urn:schemas-upnp-org:device-1-0\">"
       "<specVersion>"
@@ -95,15 +55,16 @@ const char HUE_SETUP_TEMPLATE[] PROGMEM =
       "<URLBase>http://%s:%d/</URLBase>"
       "<device>"
         "<deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType>"
-        "<friendlyName>Alexa Hue Bridge</friendlyName>"
+        "<friendlyName>%s (%s)</friendlyName>"
         "<manufacturer>Royal Philips Electronics</manufacturer>"
         "<manufacturerURL>http://www.philips.com</manufacturerURL>"
         "<modelDescription>Philips hue Personal Wireless Lighting</modelDescription>"
         "<modelName>Philips hue bridge 2015</modelName>"
-        "<modelNumber>929000226503</modelNumber>"
+        "<modelNumber>BSB002</modelNumber>"
         "<modelURL>http://www.meethue.com</modelURL>"
-        "<serialNumber>001788101fe2</serialNumber>"
-        "<UDN>uuid:b4eeb628-680e-11e7-9c2c-6c4008b0d85e</UDN>"
+        "<serialNumber>%s</serialNumber>"
+        //"<UDN>uuid:b4eeb628-680e-11e7-9c2c-6c4008b0d85e</UDN>"
+        "<UDN>uuid:2f402f80-da50-11e1-9b23-%s</UDN>"
         "<presentationURL>index.html</presentationURL>"
         "<iconList>"
           "<icon>"
@@ -150,48 +111,60 @@ const char HUE_HEADERS[] PROGMEM =
 #include <WiFiUdp.h>
 #include <functional>
 #include <vector>
+#include "../Helper/ColorConverter.h"
 
-typedef std::function<void(unsigned char, const char *, bool)> TStateFunction;
+typedef std::function<void(unsigned char, bool, rgbwcolor)> THueSetColorFunction;
+//typedef std::function<void(unsigned char, int, int, int, int)> THueSetColorFunction;
 
 typedef struct {
     char * name;
     char * uuid;
-    bool hit;
+    struct rgbwcolor color = { 0,0,0,0 };
+    uint8_t color_mode;
     bool state;
-    bool brightness;
-    bool hue;
-    AsyncWebServer * server;
+    int transitiontime;
+    int ct;
+    int hue;
+    int bri;
+    int sat;
+    float x;
+    float y;
 } hueesp_device_t;
 
 class hueESP {
     public:
-        hueESP(unsigned int port = HUE_DEFAULT_TCP_BASE_PORT);
-        void addDevice(const char * device_name);
-        void onMessage(TStateFunction fn) { _callback = fn; }
+        //hueESP(unsigned int port = HUE_DEFAULT_TCP_BASE_PORT);
+        hueESP(AsyncWebServer * server);
+        void setBridgeName(const char * bridgeName);
+        void addDevice(const char * deviceName);
+        void onChangeDevice(THueSetColorFunction fn) { _changeDeviceCallback = fn; }
         void handle();
 
     private:
         unsigned int _base_port = HUE_DEFAULT_TCP_BASE_PORT;
         std::vector<hueesp_device_t> _devices;
         WiFiUDP _udp;
-        TStateFunction _callback = NULL;
+        THueSetColorFunction _changeDeviceCallback = NULL;
+        ColorConverter convert;
 
         bool _enabled = true;
+        bool _hit = false;
         char * _uuid;
+        char * _name;
         unsigned int _roundsLeft = 0;
         unsigned int _current = 0;
         unsigned long _lastTick;
         IPAddress _remoteIP;
         unsigned int _remotePort;
 
+        void _setDevice(int channel, JsonObject &payload);
         String _getValue(String data, char separator, int index);
-        void _attachApi(unsigned int port);
+        void _attachApi(AsyncWebServer * server);
         void _sendUDPResponse(unsigned int device_id);
         void _nextUDPResponse();
         void _handleUDPPacket(const IPAddress remoteIP, unsigned int remotePort, uint8_t *data, size_t len);
         void _handleSetup(AsyncWebServerRequest *request);
         void _handleContent(AsyncWebServerRequest *request, unsigned int device_id, char * content);
-
 };
 
 #endif

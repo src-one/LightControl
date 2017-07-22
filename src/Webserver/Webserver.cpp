@@ -13,8 +13,8 @@ void Webserver::init() {
 
   _attachApiGetHeapEndpoint();
 
-  server.begin();
-  server.addHandler(&ws);
+  server->begin();
+  server->addHandler(&ws);
   //ws.onEvent(_onWsEvent);
   Serial.println("HTTP server started");
 }
@@ -51,9 +51,9 @@ void Webserver::_apiSetWebsocketText(String payload) {
 // ####################### Fileserver ########################
 
 void Webserver::_attachFileServer() {
-  server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
+  server->serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
 
-  server.onNotFound([](AsyncWebServerRequest *request) {
+  server->onNotFound([](AsyncWebServerRequest *request) {
     request->send(404);
   });
 }
@@ -61,7 +61,7 @@ void Webserver::_attachFileServer() {
 // ####################### Endpoints ########################
 
 void Webserver::_attachApiSetChannelsEndpoint() {
-  server.on("/api/channel", HTTP_POST, [](AsyncWebServerRequest *request) {
+  server->on("/_api/channel", HTTP_POST, [](AsyncWebServerRequest *request) {
     request->send(200, "text/json", "{}");
   },
 
@@ -114,7 +114,7 @@ void Webserver::_attachApiSetBarcodeEndpoint()
 */
 
 void Webserver::_attachApiGetChannelsEndpoint() {
-  server.on("/api/channels", HTTP_GET, [&](AsyncWebServerRequest *request) {
+  server->on("/_api/channels", HTTP_GET, [&](AsyncWebServerRequest *request) {
     String result = "";
 
     if(_getChannelsCallback != NULL) {
@@ -127,7 +127,7 @@ void Webserver::_attachApiGetChannelsEndpoint() {
 
 void Webserver::_attachApiGetHeapEndpoint()
 {
-  server.on("/api/heap", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server->on("/_api/heap", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200, "text/plain", String(ESP.getFreeHeap()));
   });
 }
