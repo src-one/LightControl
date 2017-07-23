@@ -63,7 +63,6 @@ const char HUE_UDP_BROADCAST_TEMPLATE[] PROGMEM =
         "<modelNumber>BSB002</modelNumber>"
         "<modelURL>http://www.meethue.com</modelURL>"
         "<serialNumber>%s</serialNumber>"
-        //"<UDN>uuid:b4eeb628-680e-11e7-9c2c-6c4008b0d85e</UDN>"
         "<UDN>uuid:2f402f80-da50-11e1-9b23-%s</UDN>"
         "<presentationURL>index.html</presentationURL>"
         "<iconList>"
@@ -96,6 +95,34 @@ const char HUE_HEADERS[] PROGMEM =
     "CONNECTION: close\r\n\r\n"
     "%s\r\n";
 
+//const char HUE_LIGHT_RESPONSE[] PROGMEM =
+//    "{\"pointsymbol\":{},\"state\":{\"on\":%s,\"bri\":1,\"hue\":33864,\"sat\":200,\"effect\":\"none\",\"xy\":[0.3297,0.3433],\"ct\":178,\"alert\":\"none\",\"colormode\":\"ct\",\"reachable\":true},\"name\":\"Test 2\",\"modelid\":\"LCT010\",\"type\":\"Extended color light\",\"manufacturername\":\"Philips\",\"uniqueid\":\"%s\",\"swversion\":\"6601820\"}";
+
+const char HUE_LIGHT_RESPONSE[] PROGMEM =
+    "{"
+      "\"state\": {"
+        "\"on\": %s,"
+        "\"bri\": %d,"
+        "\"hue\": %d,"
+        "\"sat\": %d,"
+        "\"effect\": \"none\","
+        "\"xy\": ["
+          "%s,"
+          "%s"
+        "],"
+        "\"ct\": %d,"
+        "\"alert\": \"none\","
+        "\"colormode\": \"%s\","
+        "\"reachable\": true"
+      "},"
+      "\"type\": \"Extended color light\","
+      "\"name\": \"%s\","
+      "\"modelid\": \"LCT010\","
+      "\"manufacturername\": \"Philips\","
+      "\"uniqueid\": \"%s\","
+      "\"swversion\": \"6601820\""
+    "}";
+
 #ifdef DEBUG_HUE
     #define DEBUG_MSG_HUE(...) Serial.printf( __VA_ARGS__ )
 #else
@@ -113,22 +140,22 @@ const char HUE_HEADERS[] PROGMEM =
 #include <vector>
 #include "../Helper/ColorConverter.h"
 
-typedef std::function<void(unsigned char, bool, rgbwcolor)> THueSetColorFunction;
+typedef std::function<void(unsigned char, bool, int, rgbwcolor)> THueSetColorFunction;
 //typedef std::function<void(unsigned char, int, int, int, int)> THueSetColorFunction;
 
 typedef struct {
     char * name;
     char * uuid;
     struct rgbwcolor color = { 0,0,0,0 };
-    uint8_t color_mode;
-    bool state;
-    int transitiontime;
-    int ct;
-    int hue;
-    int bri;
-    int sat;
-    float x;
-    float y;
+    uint8_t color_mode = 1;
+    bool state = false;
+    int transitiontime = 5;
+    int ct = 0;
+    int hue = 0;
+    int bri = 0;
+    int sat = 0;
+    float x = 0.000000f;
+    float y = 0.000000f;
 } hueesp_device_t;
 
 class hueESP {

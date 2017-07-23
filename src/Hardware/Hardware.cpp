@@ -40,7 +40,7 @@ void Hardware::init()
     scan();
 
     _pwm.begin();
-    _pwm.setPWMFreq(1600);
+    _pwm.setPWMFreq(256);
     //_pwm.setInvertedLogicMode();
     //_pwm.enableOutputDriverMode();
 }

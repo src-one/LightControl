@@ -1,5 +1,4 @@
 #define ENABLE_DEBUG_OUTPUT true
-#define DEBUG_FAUXMO true
 #define DEBUG_HUE true
 
 #include <vector>
@@ -25,7 +24,6 @@
 #include "Webserver/Webserver.h"
 
 #include "Upnp/hueESP.h"
-//#include "Upnp/fauxmoESP.h"
 
 #include "helper/CrossFader.h"
 
@@ -35,7 +33,6 @@ Hardware hardware;
 Webserver webserver;
 
 hueESP hue(webserver.server);
-//fauxmoESP fauxmo;
 
 const char * hostName = "lightcontrol";
 
@@ -372,102 +369,94 @@ void setup() {
     });
 
     hue.setBridgeName("LightControl Bridge");
+
     hue.addDevice("Decke vorne");
     hue.addDevice("Decke hinten");
+    hue.addDevice("Tageslicht");
+    hue.addDevice("Partybeleuchtung");
+    hue.addDevice("ganze Beleuchtung");
+    hue.addDevice("coole Atmosphäre");
 
-    hue.onChangeDevice([](unsigned char deviceId, bool state, rgbwcolor color) {
+    hue.onChangeDevice([](unsigned char deviceId, bool state, int brightness, rgbwcolor color) {
         Serial.printf("[MAIN] Device #%d", deviceId);
         Serial.printf(" STATE: %d", (state ? "on" : "off"));
         Serial.printf(" RGBW: %d %d %d %d\n", color.r, color.g, color.b, color.w);
 
         if(deviceId == 1 || deviceId == 2) {
-
           if(state) {
-            hardware.setChannel(deviceId - 1, 0, map(color.r, 0, 254, 0, 4095));
-            hardware.setChannel(deviceId - 1, 1, map(color.g, 0, 254, 0, 4095));
-            hardware.setChannel(deviceId - 1, 2, map(color.b, 0, 254, 0, 4095));
-            hardware.setChannel(deviceId - 1, 3, map(color.w, 0, 254, 0, 4095));
+            if(true) {
+              hardware.setChannel(deviceId - 1, 0, map(color.r, 0, 255, 0, 4095));
+              hardware.setChannel(deviceId - 1, 1, map(color.g, 0, 255, 0, 4095));
+              hardware.setChannel(deviceId - 1, 2, map(color.b, 0, 255, 0, 4095));
+              hardware.setChannel(deviceId - 1, 3, map(color.w, 0, 255, 0, 4095));
+            } else {
+              hardware.setChannel(deviceId - 1, 0, map(color.w, 0, 255, 0, 4095));
+              hardware.setChannel(deviceId - 1, 1, map(color.b, 0, 255, 0, 4095));
+              hardware.setChannel(deviceId - 1, 2, map(color.g, 0, 255, 0, 4095));
+              hardware.setChannel(deviceId - 1, 3, map(color.r, 0, 255, 0, 4095));
+            }
           } else {
             hardware.setChannel(deviceId - 1, 0, 0);
             hardware.setChannel(deviceId - 1, 1, 0);
             hardware.setChannel(deviceId - 1, 2, 0);
             hardware.setChannel(deviceId - 1, 3, 0);
           }
-
-          updateChannelsTask();
         }
-    });
 
-    //fauxmo.addDevice("vorderes Tageslicht");
-    //fauxmo.addDevice("hinteres Tageslicht");
-    //fauxmo.addDevice("Kinobeleuchtung");
-    //fauxmo.addDevice("Kinobeleuchtung");
-    //fauxmo.addDevice("Partybeleuchtung");
-    //fauxmo.addDevice("ganze Beleuchtung");
-    //fauxmo.addDevice("coole Atmosphäre");
+        if(deviceId == 3) {
+          int _brightness = map(brightness, 0, 255, 0, 4095);
 
-/*
-    fauxmo.onMessage([](unsigned char device_id, const char * device_name, bool state) {
-        Serial.printf("[MAIN] Device #%d (%s) state: %s\n", device_id, device_name, state ? "ON" : "OFF");
-
-        if(device_id == 0) {
-          hardware.setChannel(0, 0, state ? 4095 : 0);
+          hardware.setChannel(0, 0, state ? _brightness : 0);
           hardware.setChannel(0, 1, 0);
           hardware.setChannel(0, 2, 0);
           hardware.setChannel(0, 3, 0);
-          hardware.setChannel(1, 0, state ? 4095 : 0);
+          hardware.setChannel(1, 0, state ? _brightness : 0);
           hardware.setChannel(1, 1, 0);
           hardware.setChannel(1, 2, 0);
           hardware.setChannel(1, 3, 0);
         }
 
-        if(device_id == 1) {
-          hardware.setChannel(0, 0, state ? 100 : 0);
-          hardware.setChannel(0, 1, 0);
-          hardware.setChannel(0, 2, 0);
-          hardware.setChannel(0, 3, 0);
-          hardware.setChannel(1, 0, state ? 100 : 0);
-          hardware.setChannel(1, 1, 0);
-          hardware.setChannel(1, 2, 0);
-          hardware.setChannel(1, 3, 0);
-        }
+        if(deviceId == 4) {
+          int _brightness1 = map(brightness, 0, 255, 0, 1000);
+          int _brightness2 = map(brightness, 0, 255, 0, 600);
 
-        if(device_id == 2) {
           hardware.setChannel(0, 0, 0);
-          hardware.setChannel(0, 1, state ? 250 : 0);
+          hardware.setChannel(0, 1, state ? _brightness1 : 0);
           hardware.setChannel(0, 2, 0);
-          hardware.setChannel(0, 3, state ? 150 : 0);
+          hardware.setChannel(0, 3, state ? _brightness2 : 0);
           hardware.setChannel(1, 0, 0);
-          hardware.setChannel(1, 1, state ? 250 : 0);
+          hardware.setChannel(1, 1, state ? _brightness1 : 0);
           hardware.setChannel(1, 2, 0);
-          hardware.setChannel(1, 3, state ? 150 : 0);
+          hardware.setChannel(1, 3, state ? _brightness2 : 0);
         }
 
-        if(device_id == 3) {
-          hardware.setChannel(0, 0, state ? 4095 : 0);
-          hardware.setChannel(0, 1, state ? 4095 : 0);
-          hardware.setChannel(0, 2, state ? 4095 : 0);
-          hardware.setChannel(0, 3, state ? 4095 : 0);
-          hardware.setChannel(1, 0, state ? 4095 : 0);
-          hardware.setChannel(1, 1, state ? 4095 : 0);
-          hardware.setChannel(1, 2, state ? 4095 : 0);
-          hardware.setChannel(1, 3, state ? 4095 : 0);
+        if(deviceId == 5) {
+          int _brightness = map(brightness, 0, 255, 0, 4095);
+
+          hardware.setChannel(0, 0, state ? _brightness : 0);
+          hardware.setChannel(0, 1, state ? _brightness : 0);
+          hardware.setChannel(0, 2, state ? _brightness : 0);
+          hardware.setChannel(0, 3, state ? _brightness : 0);
+          hardware.setChannel(1, 0, state ? _brightness : 0);
+          hardware.setChannel(1, 1, state ? _brightness : 0);
+          hardware.setChannel(1, 2, state ? _brightness : 0);
+          hardware.setChannel(1, 3, state ? _brightness : 0);
         }
 
-        if(device_id == 4) {
+        if(deviceId == 6) {
           hardware.setChannel(0, 0, state ? 0 : 0);
-          hardware.setChannel(0, 1, state ? 564 : 0);
+          hardware.setChannel(0, 1, state ? map(brightness, 0, 255, 0, 564) : 0);
           hardware.setChannel(0, 2, state ? 0 : 0);
-          hardware.setChannel(0, 3, state ? 4095 : 0);
+          hardware.setChannel(0, 3, state ? map(brightness, 0, 255, 0, 4095) : 0);
           hardware.setChannel(1, 0, state ? 0 : 0);
-          hardware.setChannel(1, 1, state ? 4095 : 0);
-          hardware.setChannel(1, 2, state ? 138 : 0);
-          hardware.setChannel(1, 3, state ? 1976 : 0);
+          hardware.setChannel(1, 1, state ? map(brightness, 0, 255, 0, 4095) : 0);
+          hardware.setChannel(1, 2, state ? map(brightness, 0, 255, 0, 138) : 0);
+          hardware.setChannel(1, 3, state ? map(brightness, 0, 255, 0, 1976) : 0);
         }
 
         updateChannelsTask();
     });
-*/
+
     hardware.setYellowLed(true);
 }
 

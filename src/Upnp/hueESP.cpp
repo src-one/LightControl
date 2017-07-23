@@ -62,6 +62,7 @@ String extractValue(const char *data, char separator, int index) {
 }
 
 void printRequestDetails(AsyncWebServerRequest *request) {
+  return;
 /*
   if (request->method() == HTTP_GET)
     Serial.printf("GET");
@@ -266,7 +267,7 @@ void hueESP::_setDevice(int channel, JsonObject &payload) {
     return;
   }
 
-  hueesp_device_t & device = _devices[channel];
+  hueesp_device_t & device = _devices[channel - 1];
 
   if (payload.containsKey("on")) {
     device.state= payload["on"].as<boolean>();
@@ -334,12 +335,13 @@ void hueESP::_setDevice(int channel, JsonObject &payload) {
   DEBUG_MSG_HUE(device.state ? "true" : "false");
   DEBUG_MSG_HUE("\n");
 */
+  _devices[channel - 1] = device;
+
   if (_changeDeviceCallback) {
-    _changeDeviceCallback(channel, device.state, device.color);
+    _changeDeviceCallback(channel, device.state, device.bri, device.color);
   }
 }
 
-//void hueESP::_attachApi(unsigned int port) {
 void hueESP::_attachApi(AsyncWebServer * server) {
   // TCP Server
   //AsyncWebServer * server = new AsyncWebServer(port);
@@ -360,30 +362,50 @@ void hueESP::_attachApi(AsyncWebServer * server) {
           }
       );
   */
-  /*
-  server->on("index.html", HTTP_GET, [this](AsyncWebServerRequest *request) {
-    DEBUG_MSG_HUE("[HUE] index.html\n");
-    request->send(SPIFFS, "/index.html");
-  });
 
-  server->on("/favicon.ico", HTTP_GET, [this](AsyncWebServerRequest *request) {
-    DEBUG_MSG_HUE("[HUE] favicon.ico\n");
-    request->send(SPIFFS, "/images/favicon.ico");
-  });
-  */
   // /api/*/lights/*/state
   server->on("/api", HTTP_GET, [this](AsyncWebServerRequest *request) {
     DEBUG_MSG_HUE("[HUE] serving /lights/*/state endpoint\n");
 
-    hueesp_device_t device = _devices[0];
+    const char* command = request->url().c_str();
 
-    if (device.state == true) {
-      DEBUG_MSG_HUE("[HUE] serving /lights/* ON State\n");
-      request->send(SPIFFS, "/hueLightsResponseOn.json", "application/json");
-    } else {
-      DEBUG_MSG_HUE("[HUE] serving /lights/* OFF State\n");
-      request->send(SPIFFS, "/hueLightsResponseOff.json", "application/json");
+    Serial.println(String("CHANNEL:\t") + extractValue(command, '/', 4));
+    int channel = atoi(extractValue(command, '/', 4).c_str());
+
+    hueesp_device_t device = _devices[channel - 1];
+
+    char _response[strlen(HUE_LIGHT_RESPONSE) + 100];
+
+    String _colormode = "";
+    switch(device.color_mode) {
+      case COLOR_MODE_CT:
+        _colormode = "ct";
+        break;
+      case COLOR_MODE_HUE:
+        _colormode = "hs";
+        break;
+      case COLOR_MODE_XY:
+        _colormode = "xy";
+        break;
     }
+
+    sprintf_P(_response, HUE_LIGHT_RESPONSE,
+      (device.state ? "true" : "false"),
+      device.bri,
+      device.hue,
+      device.sat,
+      String(device.x, 6).c_str(),
+      String(device.y, 6).c_str(),
+      device.ct,
+      _colormode.c_str(),
+      device.name,
+      device.uuid);
+
+    //sprintf_P(_response, HUE_LIGHT_RESPONSE, (device.state ? "true" : "false"), device.uuid);
+
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", _response);
+    response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+    request->send(response);
   }).setFilter(matchLightState);
 
   // /api/*/lights/new
@@ -435,6 +457,7 @@ void hueESP::_attachApi(AsyncWebServer * server) {
     AsyncJsonResponse * response = new AsyncJsonResponse();
     JsonObject& root = response->getRoot();
 */
+/*
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     DynamicJsonBuffer jsonBuffer;
     JsonObject &root = jsonBuffer.createObject();
@@ -478,7 +501,7 @@ void hueESP::_attachApi(AsyncWebServer * server) {
     //response->addHeader("Content-Type", "application/json");
     //response->setLength();
     root.printTo(*response);
-
+*/
     //request->send(response);
     //request->send(200, "application/json", response);
 /*
@@ -486,15 +509,39 @@ void hueESP::_attachApi(AsyncWebServer * server) {
     response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
     request->send(response);
 */
+    char _response[strlen(HUE_LIGHT_RESPONSE) + 100];
 
-    if (device.state == true) {
-      DEBUG_MSG_HUE("[HUE] serving /lights/* ON State\n");
-      request->send(SPIFFS, "/hueLightsResponseOn.json", "application/json");
-    } else {
-      DEBUG_MSG_HUE("[HUE] serving /lights/* OFF State\n");
-      request->send(SPIFFS, "/hueLightsResponseOff.json", "application/json");
+    String _colormode = "";
+    switch(device.color_mode) {
+      case COLOR_MODE_CT:
+        _colormode = "ct";
+        break;
+      case COLOR_MODE_HUE:
+        _colormode = "hs";
+        break;
+      case COLOR_MODE_XY:
+        _colormode = "xy";
+        break;
     }
 
+    sprintf_P(_response, HUE_LIGHT_RESPONSE,
+      (device.state ? "true" : "false"),
+      device.bri,
+      device.hue,
+      device.sat,
+      String(device.x, 6).c_str(),
+      String(device.y, 6).c_str(),
+      device.ct,
+      _colormode.c_str(),
+      device.name,
+      device.uuid);
+
+    //char _response[strlen(HUE_LIGHT_RESPONSE) + 50];
+    //sprintf_P(_response, HUE_LIGHT_RESPONSE, (device.state ? "true" : "false"), device.uuid);
+
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", _response);
+    response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
+    request->send(response);
 
   }).setFilter(matchLight);
 
@@ -502,16 +549,64 @@ void hueESP::_attachApi(AsyncWebServer * server) {
   server->on("/api", HTTP_GET, [this](AsyncWebServerRequest *request) {
     DEBUG_MSG_HUE("[HUE] serving /lights endpoint\n");
 
-    request->send(SPIFFS, "/hueLightsConfig.min.json", "application/json");
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject &root = jsonBuffer.createObject();
+
+    int i = 1;
+
+    for (auto & device : _devices) {
+      JsonObject& light = root.createNestedObject(String(i));
+
+      JsonObject& state = light.createNestedObject("state");
+
+      state["on"] = device.state;
+      state["bri"] = device.bri;
+      state["hue"] = device.hue;
+      state["sat"] = device.sat;
+      state["effect"] = "none";
+
+      JsonArray& xy = light.createNestedArray("xy");
+      xy.add(device.x);
+      xy.add(device.y);
+
+      state["ct"] = device.ct;
+      state["alert"] = "select";
+
+      switch(device.color_mode) {
+        case COLOR_MODE_CT:
+          state["colormode"] = "ct";
+          break;
+        case COLOR_MODE_HUE:
+          state["colormode"] = "hs";
+          break;
+        case COLOR_MODE_XY:
+          state["colormode"] = "xy";
+          break;
+      }
+      state["reachable"] = true;
+
+      light["type"] = "Extended color light";
+      light["name"] = device.name;
+      light["modelid"] = "LCT010";
+      light["manufacturername"] = "Philips";
+      light["uniqueid"] = device.uuid;
+      light["swversion"] = "6601820";
+
+      i++;
+    }
+
+    root.printTo(*response);
+    request->send(response);
   }).setFilter(matchLights);
 
     // /api/config /api/*/config
   server->on("/api", HTTP_GET, [this](AsyncWebServerRequest *request) {
     DEBUG_MSG_HUE("[HUE] serving /config endpoint\n");
 
-    AsyncJsonResponse * response = new AsyncJsonResponse();
+    //AsyncJsonResponse * response = new AsyncJsonResponse();
     //response->addHeader("Server","ESP Async Web Server");
-    JsonObject& root = response->getRoot();
+    //JsonObject& root = response->getRoot();
 
     request->send(SPIFFS, "/hueBridgeConfig.min.json", "application/json");
   }).setFilter(matchConfig);
@@ -586,12 +681,12 @@ void hueESP::_attachApi(AsyncWebServer * server) {
     printRequestDetails(request);
 
     if (request->hasParam("body", true)) {
-      Serial.println("\n#### COMMAND:");
+      //Serial.println("\n#### COMMAND:");
       AsyncWebParameter *body = request->getParam("body", true);
 
       String message = body->value();
-      Serial.println("MESSAGE:");
-      Serial.println(message);
+      //Serial.println("MESSAGE:");
+      //Serial.println(message);
 
       StaticJsonBuffer<1500> jsonBuffer;
       JsonObject &root = jsonBuffer.parseObject(message);
@@ -604,7 +699,7 @@ void hueESP::_attachApi(AsyncWebServer * server) {
       const char* command = request->url().c_str();
       int channel = atoi(extractValue(command, '/', 4).c_str());
 
-      Serial.println(String("CHANNEL:\t") + channel);
+      //Serial.println(String("CHANNEL:\t") + channel);
 
       _setDevice(channel, root);
 
@@ -616,7 +711,7 @@ void hueESP::_attachApi(AsyncWebServer * server) {
   NULL,
   [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
     if (index + len == total && total != 0) {
-      DEBUG_MSG_HUE("[HUE] Body Data: %s\n", data);
+      //DEBUG_MSG_HUE("[HUE] Body Data: %s\n", data);
 
       StaticJsonBuffer<1500> jsonBuffer;
       JsonObject &root = jsonBuffer.parseObject(data);
@@ -695,55 +790,6 @@ void hueESP::_attachApi(AsyncWebServer * server) {
       request->send(response);
     }
   });
-
-  // new_device.server->serveStatic("/", SPIFFS,
-  // "/").setDefaultFile("index.html");
-/*
-  server->onNotFound([this](AsyncWebServerRequest *request) {
-    hueesp_device_t device = _devices[0];
-
-    printRequestDetails(request);
-
-    const char* command = request->url().c_str();
-
-    Serial.println(extractValue(command, '/', 2));
-    Serial.println(extractValue(command, '/', 3));
-    Serial.println(extractValue(command, '/', 4));
-    Serial.println(extractValue(command, '/', 5));
-    Serial.println(extractValue(command, '/', 6));
-
-    String message = "";
-
-    if (request->hasParam("body", true)) {
-      Serial.println("\n#### COMMAND:");
-      AsyncWebParameter *body = request->getParam("body", true);
-
-      message = body->value().c_str();
-      Serial.println("MESSAGE:");
-      Serial.println(message);
-    }
-
-    String _command = "";
-
-    if (request->method() == HTTP_PUT && request->hasParam("body", true)) {
-      DEBUG_MSG_HUE("\n[HUE] serving request handling endpoint\n");
-
-      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "[{\"success\": " + String(message) + "}]");
-      response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
-      request->send(response);
-
-      Serial.println("\n#### END COMMAND ####\n\n");
-    } else {
-      DEBUG_MSG_HUE("[HUE] serving fallback endpoint\n");
-
-      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{}");
-      response->addHeader("Cache-Control","no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
-      request->send(response);
-      // request->send(404);
-    }
-  });
-*/
-  //server->begin();
 }
 
 void hueESP::setBridgeName(const char *bridgeName) {
