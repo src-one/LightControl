@@ -358,6 +358,7 @@ void setup() {
       Serial.println("Error setting up MDNS responder!");
     }
 
+
     Serial.println("Webserver started");
 
     attachTasks();
@@ -379,21 +380,22 @@ void setup() {
 
     hue.onChangeDevice([](unsigned char deviceId, bool state, int brightness, rgbwcolor color) {
         Serial.printf("[MAIN] Device #%d", deviceId);
-        Serial.printf(" STATE: %d", (state ? "on" : "off"));
+        Serial.printf(" STATE: %s", (state ? "on" : "off"));
+        Serial.printf(" BRIGHTNESS: %d", brightness);
         Serial.printf(" RGBW: %d %d %d %d\n", color.r, color.g, color.b, color.w);
 
         if(deviceId == 1 || deviceId == 2) {
           if(state) {
             if(true) {
-              hardware.setChannel(deviceId - 1, 0, map(color.r, 0, 255, 0, 4095));
-              hardware.setChannel(deviceId - 1, 1, map(color.g, 0, 255, 0, 4095));
-              hardware.setChannel(deviceId - 1, 2, map(color.b, 0, 255, 0, 4095));
-              hardware.setChannel(deviceId - 1, 3, map(color.w, 0, 255, 0, 4095));
+              hardware.setChannel(deviceId - 1, 0, map(color.r, 0, 254, 0, 4095));
+              hardware.setChannel(deviceId - 1, 1, map(color.g, 0, 254, 0, 4095));
+              hardware.setChannel(deviceId - 1, 2, map(color.b, 0, 254, 0, 4095));
+              hardware.setChannel(deviceId - 1, 3, map(color.w, 0, 254, 0, 4095));
             } else {
-              hardware.setChannel(deviceId - 1, 0, map(color.w, 0, 255, 0, 4095));
-              hardware.setChannel(deviceId - 1, 1, map(color.b, 0, 255, 0, 4095));
-              hardware.setChannel(deviceId - 1, 2, map(color.g, 0, 255, 0, 4095));
-              hardware.setChannel(deviceId - 1, 3, map(color.r, 0, 255, 0, 4095));
+              hardware.setChannel(deviceId - 1, 0, map(color.w, 0, 254, 0, 4095));
+              hardware.setChannel(deviceId - 1, 1, map(color.b, 0, 254, 0, 4095));
+              hardware.setChannel(deviceId - 1, 2, map(color.g, 0, 254, 0, 4095));
+              hardware.setChannel(deviceId - 1, 3, map(color.r, 0, 254, 0, 4095));
             }
           } else {
             hardware.setChannel(deviceId - 1, 0, 0);

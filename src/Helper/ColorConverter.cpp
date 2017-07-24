@@ -80,7 +80,8 @@ rgbwcolor ColorConverter::hue(int bri, int hue, int sat) {
 rgbwcolor ColorConverter::xy(int bri, float x, float y) {
   rgbwcolor color(0, 0, 0, 0);
 
-  float Y = bri / 255.0f;
+  //float Y = bri / 255.0f;
+  float Y = (bri / 255.0f) * 0.225f;
 
   float z = 1.0f - x - y;
 

@@ -313,6 +313,10 @@ void hueESP::_setDevice(int channel, JsonObject &payload) {
     device.y = payload["xy"][1].as<float>();
     device.color_mode = COLOR_MODE_XY;
     device.color = convert.xy(device.bri, device.x, device.y);
+
+    hsvcolor hsb = device.color;
+    device.hue = convert.getHue(hsb);
+    device.sat = convert.getSaturation(hsb);
   }
 
   JsonVariant _ct = payload["ct"];
@@ -394,8 +398,8 @@ void hueESP::_attachApi(AsyncWebServer * server) {
       device.bri,
       device.hue,
       device.sat,
-      String(device.x, 6).c_str(),
-      String(device.y, 6).c_str(),
+      String(device.x, 4).c_str(),
+      String(device.y, 4).c_str(),
       device.ct,
       _colormode.c_str(),
       device.name,
@@ -529,8 +533,8 @@ void hueESP::_attachApi(AsyncWebServer * server) {
       device.bri,
       device.hue,
       device.sat,
-      String(device.x, 6).c_str(),
-      String(device.y, 6).c_str(),
+      String(device.x, 4).c_str(),
+      String(device.y, 4).c_str(),
       device.ct,
       _colormode.c_str(),
       device.name,
@@ -567,8 +571,8 @@ void hueESP::_attachApi(AsyncWebServer * server) {
       state["effect"] = "none";
 
       JsonArray& xy = light.createNestedArray("xy");
-      xy.add(device.x);
-      xy.add(device.y);
+      xy.add(atof(String(device.x, 4).c_str()));
+      xy.add(atof(String(device.y, 4).c_str()));
 
       state["ct"] = device.ct;
       state["alert"] = "select";
@@ -676,7 +680,7 @@ void hueESP::_attachApi(AsyncWebServer * server) {
 
   // /api/*/lights/*/state
   server->on("/api", HTTP_PUT, [this](AsyncWebServerRequest *request) {
-    DEBUG_MSG_HUE("[HUE] /api PUT request:\n");
+    //DEBUG_MSG_HUE("[HUE] /api PUT request:\n");
 
     printRequestDetails(request);
 

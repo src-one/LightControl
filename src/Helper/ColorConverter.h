@@ -10,8 +10,8 @@
 #define COLOR_MODE_CT 2
 #define COLOR_MODE_HUE 3
 
-#define MIN(a,b) ((a<b)?a:b)
-#define MAX(a,b) ((a>b)?a:b)
+#define MIN(a,b) ((a < b) ? a : b)
+#define MAX(a,b) ((a > b) ? a : b)
 
 struct rgbwcolor {
   rgbwcolor(uint8_t r, uint8_t g, uint8_t b, uint8_t w) : r(r), g(g), b(b), w(w) {};
@@ -23,16 +23,16 @@ struct rgbwcolor {
 
 struct hsvcolor {
   hsvcolor(const rgbwcolor& color) {
-    float r = ((float)color.r)/COLOR_SATURATION;
-    float g = ((float)color.g)/COLOR_SATURATION;
-    float b = ((float)color.b)/COLOR_SATURATION;
-    float mi = MIN(MIN(r,g),b);
-    float ma = MAX(MAX(r,g),b);
+    float r = ((float)color.r) / COLOR_SATURATION;
+    float g = ((float)color.g) / COLOR_SATURATION;
+    float b = ((float)color.b) / COLOR_SATURATION;
+    float mi = MIN(MIN(r, g), b);
+    float ma = MAX(MAX(r, g), b);
     float diff = ma - mi;
 
     v = ma;
     h = 0;
-    s = (!v)?0:(diff/ma);
+    s = (!v) ? 0 : (diff / ma);
 
     if (diff) {
       if (r == v) {
