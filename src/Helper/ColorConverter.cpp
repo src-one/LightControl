@@ -4,7 +4,12 @@
 #include <Arduino.h>
 #include "ColorConverter.h"
 
-#define max(a, b) ((a)>(b) ? (a) : (b))
+//#define min(a, b) ((a)<(b) ? (a) : (b))
+//#define max(a, b) ((a)>(b) ? (a) : (b))
+
+#define min(a,b) ((a)<(b)?(a):(b))
+#define max(a,b) ((a)>(b)?(a):(b))
+#define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
 
 ColorConverter::ColorConverter()
 {
@@ -40,43 +45,44 @@ rgbwcolor ColorConverter::hue(int bri, int hue, int sat) {
   t = v * (1.0 - (s * (1.0 - ff)));
 
   switch (i) {
-  case 0:
-    color.r = v * 255.0;
-    color.g = t * 255.0;
-    color.b = p * 255.0;
-    break;
-  case 1:
-    color.r = q * 255.0;
-    color.g = v * 255.0;
-    color.b = p * 255.0;
-    break;
-  case 2:
-    color.r = p * 255.0;
-    color.g = v * 255.0;
-    color.b = t * 255.0;
-    break;
+    case 0:
+      color.r = v * 255.0;
+      color.g = t * 255.0;
+      color.b = p * 255.0;
+      break;
+    case 1:
+      color.r = q * 255.0;
+      color.g = v * 255.0;
+      color.b = p * 255.0;
+      break;
+    case 2:
+      color.r = p * 255.0;
+      color.g = v * 255.0;
+      color.b = t * 255.0;
+      break;
 
-  case 3:
-    color.r = p * 255.0;
-    color.g = q * 255.0;
-    color.b = v * 255.0;
-    break;
-  case 4:
-    color.r = t * 255.0;
-    color.g = p * 255.0;
-    color.b = v * 255.0;
-    break;
-  case 5:
-  default:
-    color.r = v * 255.0;
-    color.g = p * 255.0;
-    color.b = q * 255.0;
-    break;
+    case 3:
+      color.r = p * 255.0;
+      color.g = q * 255.0;
+      color.b = v * 255.0;
+      break;
+    case 4:
+      color.r = t * 255.0;
+      color.g = p * 255.0;
+      color.b = v * 255.0;
+      break;
+    case 5:
+    default:
+      color.r = v * 255.0;
+      color.g = p * 255.0;
+      color.b = q * 255.0;
+      break;
   }
 
   return color;
 }
 
+/*
 rgbwcolor ColorConverter::xy(int bri, float x, float y) {
   rgbwcolor color(0, 0, 0, 0);
 
@@ -88,12 +94,12 @@ rgbwcolor ColorConverter::xy(int bri, float x, float y) {
   float X = (Y / y) * x;
   float Z = (Y / y) * z;
 
-/*
+
   // sRGB D65 conversion
-  float r = X * 1.656492f - Y * 0.354851f - Z * 0.255038f;
-  float g = -X * 0.707196f + Y * 1.655397f + Z * 0.036152f;
-  float b = X * 0.051713f - Y * 0.121364f + Z * 1.011530f;
-*/
+  //float r = X * 1.656492f - Y * 0.354851f - Z * 0.255038f;
+  //float g = -X * 0.707196f + Y * 1.655397f + Z * 0.036152f;
+  //float b = X * 0.051713f - Y * 0.121364f + Z * 1.011530f;
+
   // sRGB D65 conversion
   float r = X * 3.2406f - Y * 1.5372f - Z * 0.4986f;
   float g = -X * 0.9689f + Y * 1.8758f + Z * 0.0415f;
@@ -151,6 +157,72 @@ rgbwcolor ColorConverter::xy(int bri, float x, float y) {
   color.r = (int)(r * 255.0f);
   color.g = (int)(g * 255.0f);
   color.b = (int)(b * 255.0f);
+  color.w = 0;
+
+  return color;
+}
+*/
+
+rgbwcolor ColorConverter::xy(int bri, float x, float y) {
+  rgbwcolor color(0, 0, 0, 0);
+
+  float z = 1.0f - x - y;
+
+  //float Y = (bri / 255.0f);
+  float Y = 1.0f;
+  float X = (Y / y) * x;
+  float Z = (Y / y) * z;
+
+  // sRGB D65 conversion
+  //float r = X * 1.612f - Y * 0.203f - Z * 0.302f;
+  //float g = -X * 0.509f + Y * 1.412f + Z * 0.066f;
+  //float b = X * 0.026f - Y * 0.072f + Z * 0.962f;
+
+  float r = X * 3.2406f - Y * 1.5372f - Z * 0.4986f;
+  float g = -X * 0.9689f + Y * 1.8758f + Z * 0.0415f;
+  float b = X * 0.0557f - Y * 0.204f + Z * 1.057f;
+
+  if ((r > b) && (r > g) && (r > 1.0f)) {
+    g /= r;
+    b /= r;
+    r = 1.0f;
+  } else if ((g > b) && (g > r) && (g > 1.0f)) {
+    r /= g;
+    b /= g;
+    g = 1.0f;
+  } else if ((b > r) && (b > g) && (b > 1.0)) {
+    r /= b;
+    g /= b;
+    b = 1.0f;
+  }
+
+  //float r =  X * 1.656492f - Y * 0.354851f - Z * 0.255038f;
+  //float g = -X * 0.707196f + Y * 1.655397f + Z * 0.036152f;
+  //float b =  X * 0.051713f - Y * 0.121364f + Z * 1.011530f;
+
+  // Apply gamma correction
+  r = r <= 0.0031308f ? 12.92f * r : (1.0f + 0.055f) * pow(r, (1.0f / 2.4f)) - 0.055f;
+  g = g <= 0.0031308f ? 12.92f * g : (1.0f + 0.055f) * pow(g, (1.0f / 2.4f)) - 0.055f;
+  b = b <= 0.0031308f ? 12.92f * b : (1.0f + 0.055f) * pow(b, (1.0f / 2.4f)) - 0.055f;
+
+  //r = max(0.0f, min(1.0f, r));
+  //g = max(0.0f, min(1.0f, g));
+  //b = max(0.0f, min(1.0f, b));
+
+  r = constrain(r, 0.0f, 1.0f);
+  g = constrain(g, 0.0f, 1.0f);
+  b = constrain(b, 0.0f, 1.0f);
+
+  r = r * (bri / 255.0f);
+  g = g * (bri / 255.0f);
+  b = b * (bri / 255.0f);
+
+  //color.r = (int)(r * 255.0f);
+  //color.g = (int)(g * 255.0f);
+  //color.b = (int)(b * 255.0f);
+  color.r = (int)(r * 256.0f);
+  color.g = (int)(g * 256.0f);
+  color.b = (int)(b * 256.0f);
   color.w = 0;
 
   return color;

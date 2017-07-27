@@ -387,15 +387,29 @@ void setup() {
         if(deviceId == 1 || deviceId == 2) {
           if(state) {
             if(true) {
-              hardware.setChannel(deviceId - 1, 0, map(color.r, 0, 254, 0, 4095));
-              hardware.setChannel(deviceId - 1, 1, map(color.g, 0, 254, 0, 4095));
-              hardware.setChannel(deviceId - 1, 2, map(color.b, 0, 254, 0, 4095));
-              hardware.setChannel(deviceId - 1, 3, map(color.w, 0, 254, 0, 4095));
+
+              hardware.setChannel(deviceId - 1, 0, map(color.r, 0, 255, 0, 4095));
+              hardware.setChannel(deviceId - 1, 1, map(color.g, 0, 255, 0, 4095));
+              hardware.setChannel(deviceId - 1, 2, map(color.b, 0, 255, 0, 4095));
+              hardware.setChannel(deviceId - 1, 3, map(color.w, 0, 255, 0, 4095));
+/*
+              hardware.setChannel(deviceId - 1, 0, color.r);
+              hardware.setChannel(deviceId - 1, 1, color.g);
+              hardware.setChannel(deviceId - 1, 2, color.b);
+              hardware.setChannel(deviceId - 1, 3, color.w);
+*/
             } else {
-              hardware.setChannel(deviceId - 1, 0, map(color.w, 0, 254, 0, 4095));
-              hardware.setChannel(deviceId - 1, 1, map(color.b, 0, 254, 0, 4095));
-              hardware.setChannel(deviceId - 1, 2, map(color.g, 0, 254, 0, 4095));
-              hardware.setChannel(deviceId - 1, 3, map(color.r, 0, 254, 0, 4095));
+
+              hardware.setChannel(deviceId - 1, 0, map(color.w, 0, 255, 0, 4095));
+              hardware.setChannel(deviceId - 1, 1, map(color.b, 0, 255, 0, 4095));
+              hardware.setChannel(deviceId - 1, 2, map(color.g, 0, 255, 0, 4095));
+              hardware.setChannel(deviceId - 1, 3, map(color.r, 0, 255, 0, 4095));
+/*
+              hardware.setChannel(deviceId - 1, 0, color.w);
+              hardware.setChannel(deviceId - 1, 1, color.g);
+              hardware.setChannel(deviceId - 1, 2, color.b);
+              hardware.setChannel(deviceId - 1, 3, color.r);
+*/
             }
           } else {
             hardware.setChannel(deviceId - 1, 0, 0);
