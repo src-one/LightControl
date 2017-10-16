@@ -8,6 +8,11 @@ var ExtractTextPlugin = require('extract-text-webpack-plugin');
 var CopyWebpackPlugin = require('copy-webpack-plugin');
 var CompressionPlugin = require("compression-webpack-plugin");
 var CleanWebpackPlugin = require("clean-webpack-plugin");
+var HtmlWebpackInlineSVGPlugin = require('html-webpack-inline-svg-plugin');
+var ConcatPlugin = require('webpack-concat-plugin');
+var HtmlWebpackInlineSourcePlugin = require('html-webpack-inline-source-plugin');
+var RawBundlerPlugin = require('webpack-raw-bundler');
+var PreloadWebpackPlugin = require('preload-webpack-plugin');
 
 var ENV = process.env.npm_lifecycle_event;
 var isTestWatch = ENV === 'test-watch';
@@ -26,10 +31,15 @@ module.exports = function makeWebpackConfig() {
     }
 
     if (!isTest) {
+        /*
+                config.entry = isTest ? {} : {
+                    'polyfills': './src_web/polyfills.ts',
+                    'vendor': './src_web/vendor.ts',
+                    'app': './src_web/main.ts'
+                };
+        */
         config.entry = isTest ? {} : {
-            'polyfills': './src_web/polyfills.ts',
-            'vendor': './src_web/vendor.ts',
-            'app': './src_web/main.ts'
+            'app': ['./src_web/polyfills.ts', './src_web/vendor.ts', './src_web/main.ts']
         };
     }
 
@@ -50,45 +60,48 @@ module.exports = function makeWebpackConfig() {
     }
 
     config.module = {
-        rules: [
-            {
-                test: /\.ts$/,
-                loaders: ['awesome-typescript-loader?' + atlOptions, 'angular2-template-loader', '@angularclass/hmr-loader'],
-                exclude: [isTest ? /\.(e2e)\.ts$/ : /\.(spec|e2e)\.ts$/, /node_modules\/(?!(ng2-.+))/]
-            }, {
-                test: /\.(png|jpe?g|gif|svg|woff|woff2|ttf|eot|ico)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
-                loader: 'file-loader?name=fonts/[name].[ext]?'
-            }, {
-                test: /\.json$/,
-                loader: 'json-loader'
-            }, {
-                test: /\.css$/,
-                exclude: root('src_web', 'app'),
-                loader: isTest ? 'null-loader' : ExtractTextPlugin.extract({
-                    fallback: 'style-loader',
-                    use: ['css-loader', 'postcss-loader']
-                })
-            }, {
-                test: /\.css$/,
-                include: root('src_web', 'app'),
-                loader: 'raw-loader!postcss-loader'
-            }, {
-                test: /\.(scss|sass)$/,
-                exclude: root('src_web', 'app'),
-                loader: isTest ? 'null-loader' : ExtractTextPlugin.extract({
-                    fallback: 'style-loader',
-                    use: ['css-loader', 'postcss-loader', 'sass-loader']
-                })
-            }, {
-                test: /\.(scss|sass)$/,
-                exclude: root('src_web', 'css'),
-                loader: 'raw-loader!postcss-loader!sass-loader'
-            }, {
-                test: /\.html$/,
-                loader: 'raw-loader',
-                exclude: root('src_web', 'public')
-            }
-        ]
+        rules: [{
+            test: /\.ts$/,
+            loaders: ['awesome-typescript-loader?' + atlOptions, 'angular2-template-loader', '@angularclass/hmr-loader'],
+            exclude: [isTest ? /\.(e2e)\.ts$/ : /\.(spec|e2e)\.ts$/, /node_modules\/(?!(ng2-.+))/]
+        }, {
+            test: /\.(png|jpe?g|gif|svg|woff|woff2|ttf|eot|ico)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
+            loader: 'file-loader?name=fonts/[name].[ext]?'
+        }, {
+            test: /\.json$/,
+            loader: 'json-loader'
+        }, {
+            test: /\.css$/,
+            exclude: root('src_web', 'app'),
+            loader: isTest ? 'null-loader' : ExtractTextPlugin.extract({
+                fallback: 'style-loader',
+                use: ['css-loader', 'postcss-loader']
+            })
+        }, {
+            test: /\.css$/,
+            include: root('src_web', 'app'),
+            loader: 'raw-loader!postcss-loader'
+        }, {
+            test: /\.(scss|sass)$/,
+            exclude: root('src_web', 'app'),
+            loader: isTest ? 'null-loader' : ExtractTextPlugin.extract({
+                fallback: 'style-loader',
+                use: [{
+                    loader: 'css-loader',
+                    options: {
+                        minimize: true
+                    }
+                }, 'postcss-loader', 'sass-loader']
+            })
+        }, {
+            test: /\.(scss|sass)$/,
+            exclude: root('src_web', 'css'),
+            loader: 'raw-loader!postcss-loader!sass-loader'
+        }, {
+            test: /\.html$/,
+            loader: 'raw-loader',
+            exclude: root('src_web', 'public')
+        }]
     };
 
     if (isTest && !isTestWatch) {
@@ -129,6 +142,7 @@ module.exports = function makeWebpackConfig() {
                 },
                 sassLoader: {
                     //includePaths: [path.resolve(__dirname, "node_modules/foundation-sites/scss")]
+                    outputStyle: 'compressed',
                 },
                 postcss: [
                     autoprefixer({
@@ -147,14 +161,26 @@ module.exports = function makeWebpackConfig() {
 
     if (!isTest && !isTestWatch) {
         config.plugins.push(
+            /*
             new CommonsChunkPlugin({
                 name: ['vendor', 'polyfills']
+                //async: true,
             }),
+            */
             new HtmlWebpackPlugin({
                 template: './src_web/public/index.html',
-                chunksSortMode: 'dependency'
+                chunksSortMode: 'dependency',
+                inlineSource: '.(js|css)$'
             }),
-            new ExtractTextPlugin({filename: 'css/[name].css', disable: !isProd})
+            new ExtractTextPlugin({ filename: 'css/[name].css', disable: !isProd }),
+            //new HtmlWebpackInlineSVGPlugin(),
+            /*
+            new PreloadWebpackPlugin({
+                rel: 'preload',
+                include: 'all'
+            }),
+            */
+            new HtmlWebpackInlineSourcePlugin()//,
         );
     }
 
@@ -164,30 +190,70 @@ module.exports = function makeWebpackConfig() {
 
             // // Reference: http://webpack.github.io/docs/list-of-plugins.html#dedupeplugin
             // // Dedupe modules in the output
-            // new webpack.optimize.DedupePlugin(),
+            //new webpack.optimize.DedupePlugin(),
 
-            new webpack.optimize.UglifyJsPlugin({sourceMap: true, mangle: {keep_fnames: true}}),
+            new webpack.optimize.AggressiveMergingPlugin(),
+            new webpack.optimize.UglifyJsPlugin({
+                parallel: true,
+                uglifyOptions: {
+                    ie8: false,
+                    ecma: 6,
+                    warnings: true,
+                    mangle: true, // debug false
+                    output: {
+                        comments: false,
+                        beautify: false  // debug true
+                    }
+                },
+                warnings: true
+            }),
 
+            /*
+                        new ConcatPlugin({
+                            uglify: true,
+                            useHash: false,
+                            sourceMap: false,
+                            name: 'app',
+                            fileName: '[name].bundle.js',
+                            filesToConcat: ['./data/js/polyfills.js', './data/js/vendor.js', './data/js/app.js']
+                        }),
+            */
+            /*
+                        new RawBundlerPlugin({
+                            bundles: [ "vendor.js" ],
+                            "vendor.js": [ 'js/*.js' ]
+                        }),
+            */
             new CopyWebpackPlugin([{
-                from: root('src_web/public')
-            }]),
-
-            new CompressionPlugin({
-                asset: "[path].gz[query]",
-                algorithm: "gzip",
-                test: /\.(js|css|html)$/,
-                threshold: 0,
-                minRatio: 0.8,
-                deleteOriginalAssets: true
-            })//,
-
+                from: root('src_web/public'),
+                //ignore: ['logo.svg']
+            }])
+            /*
+                        new CompressionPlugin({
+                            asset: "[path].gz[query]",
+                            algorithm: "gzip",
+                            test: /\.(js|css|html|svg)$/,
+                            threshold: 0,
+                            minRatio: 0,
+                            deleteOriginalAssets: true
+                        })
+            */
             //new CleanWebpackPlugin(['js', 'css'], {
             //  root: './data',
             //  verbose: false,
             //  dry: false,
             //  exclude: ['**/*.js.gz']
             //})
-
+            /*
+            new CompressionPlugin({
+                asset: "[path].gz[query]",
+                algorithm: "gzip",
+                test: /\.(html|svg)$/,
+                threshold: 0,
+                minRatio: 0.8,
+                deleteOriginalAssets: true
+            })//,
+            */
         );
     }
 

@@ -15,23 +15,24 @@ import {ChannelDto} from './channel.dto';
             <div>Recv Message: {{ message }}</div>
         </div>
         -->
-    `
+    `,
 })
 export class WebsocketTestComponent implements OnInit {
+    public sentMessage: string = '';
+
     private socket: Subject<any>;
     //private counterSubscription: Subscription;
     private message: string;
-    public sentMessage: string = "";
 
     constructor(websocketService: WebSocketService,
                 private lightState: LightState) {
         this.socket = websocketService.connect('ws://' + document.location.host + '/ws');
     }
 
-    ngOnInit() {
+    public ngOnInit() {
         this.socket.subscribe(
             (message) => {
-                if(this.lightState.isDragging){
+                if (this.lightState.isDragging) {
                     return;
                 }
 
@@ -40,15 +41,15 @@ export class WebsocketTestComponent implements OnInit {
                 const channels: string[] = this.message.slice(0, -1).split(';');
 
                 try {
-                    if(channels.length > 0 && !this.lightState.isDragging) {
+                    if (channels.length > 0 && !this.lightState.isDragging) {
                         channels.map((channel) => {
                             const channelData = channel.split(',');
                             //console.log(channelData);
-                            this.lightState.channels[+channelData[0]][+channelData[1]] = new Channel(<ChannelDto>{
+                            this.lightState.channels[+channelData[0]][+channelData[1]] = new Channel({
                                 room: +channelData[0],
                                 channel: +channelData[1],
                                 value: +channelData[2],
-                            });
+                            } as ChannelDto);
                         });
                     } else {
                         //console.log("skip");
@@ -56,7 +57,7 @@ export class WebsocketTestComponent implements OnInit {
                 } catch (e) {
                     console.info(e);
                 }
-            }
+            },
         );
         /*
          this.launchCounter();

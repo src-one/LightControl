@@ -59,7 +59,7 @@ import {Component} from '@angular/core';
                 </div>
             </div>
         </nav>
-    `
+    `,
 })
 export class HeaderNavigationComponent {
 }

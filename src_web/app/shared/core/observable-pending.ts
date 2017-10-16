@@ -1,38 +1,40 @@
 import {Observable} from 'rxjs/Observable';
 
-export class ObservablePending<T> {
-    pending: boolean = true;
-    error: Error;
-    response: T;
-    done: (response: T) => void;
-    fail: (error: Error) => Observable<{}>;
-    onFail: (callback: Function) => (error: Error) => Observable<{}>;
+type OnFail = (error: Error) => void;
 
-    static resolve<T>(value = undefined): ObservablePending<T> {
+export class ObservablePending<T> {
+    public static resolve<T>(value?: any): ObservablePending<T> {
         const pending = new ObservablePending<T>(undefined);
         pending.done(value);
         return pending;
     }
 
-    static reject<T>(error): ObservablePending<T> {
+    public static reject<T>(error): ObservablePending<T> {
         const pending = new ObservablePending<T>(undefined);
         pending.fail(error);
         return pending;
     }
+
+    public pending: boolean = true;
+    public error: Error;
+    public response: T;
+    public done: (response: T) => void;
+    public fail: (error: Error) => Observable<{}>;
+    public onFail: (callback: OnFail) => (error: Error) => Observable<{}>;
 
     constructor(public value: any) {
         this.done = (response: T): void => {
             this.pending = false;
             this.response = response;
         };
-        this.onFail = (callback: Function) => {
+        this.onFail = (callback: OnFail) => {
             return (error: Error) => {
                 setTimeout(function() {
                     callback(error);
                 }, 1);
 
                 return this.fail(error);
-            }
+            };
         };
         this.fail = (error: Error) => {
             this.done(undefined);

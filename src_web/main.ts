@@ -1,10 +1,8 @@
-/// <reference path="../definitions/jquery/jquery.d.ts" />
-
 import {enableProdMode} from '@angular/core';
 import {platformBrowserDynamic} from '@angular/platform-browser-dynamic';
 import {AppModule} from './app/app.module';
 
-import $ = require('jquery');
+(window as any).$ = window.jQuery = jQuery;
 
 function requireExistingElement($el: JQuery) {
     if ($el.length === 0) {

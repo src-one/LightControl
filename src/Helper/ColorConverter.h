@@ -14,11 +14,11 @@
 #define MAX(a, b) ((a > b) ? a : b)
 
 struct rgbwcolor {
-  rgbwcolor(uint8_t r, uint8_t g, uint8_t b, uint8_t w) : r(r), g(g), b(b), w(w) {};
-  uint8_t r;
-  uint8_t g;
-  uint8_t b;
-  uint8_t w;
+  rgbwcolor(uint16_t r, uint16_t g, uint16_t b, uint16_t w) : r(r), g(g), b(b), w(w) {};
+  uint16_t r;
+  uint16_t g;
+  uint16_t b;
+  uint16_t w;
 };
 
 struct hsvcolor {

@@ -12,7 +12,7 @@ import '../css/main.scss';
         </main>
         <footer>
         </footer>
-    `
+    `,
 })
 export class AppComponent {
     constructor() {

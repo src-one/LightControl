@@ -10,7 +10,7 @@ import {Component} from '@angular/core';
                 <websocket-test></websocket-test>
             </div>
         </div>
-    `
+    `,
 })
 export class HomeComponent {
 }

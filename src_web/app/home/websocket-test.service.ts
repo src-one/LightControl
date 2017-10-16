@@ -8,9 +8,9 @@ const CHAT_URL = 'ws://' + document.location.host + ':3005';
 const DATA_URL = 'ws://' + document.location.host + ':3006';
 
 export interface Message {
-    author: string,
-    message: string,
-    newDate?: string
+    author: string;
+    message: string;
+    newDate?: string;
 }
 
 @Injectable()
@@ -19,21 +19,21 @@ export class WebsocketTestService {
     public randomData: Subject<number> = new Subject<number>();
 
     constructor(public service: WebSocketService) {
-        this.messages = <Subject<Message>>service
+        this.messages = service
             .connect(CHAT_URL)
             .map((response: MessageEvent): Message => {
-                let data = JSON.parse(response.data);
+                const data = JSON.parse(response.data);
                 return {
                     author: data.author,
                     message: data.message,
-                    newDate: data.newDate
-                }
-            });
+                    newDate: data.newDate,
+                };
+            }) as Subject<Message>;
 
-        this.randomData = <Subject<number>>service
+        this.randomData = service
             .connectData(DATA_URL)
             .map((response: any): number => {
                 return response.data;
-            });
+            }) as Subject<number>;
     }
 }

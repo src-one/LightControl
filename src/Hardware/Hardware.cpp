@@ -40,7 +40,7 @@ void Hardware::init()
     scan();
 
     _pwm.begin();
-    _pwm.setPWMFreq(256);
+    _pwm.setPWMFreq(1600);
     //_pwm.setInvertedLogicMode();
     //_pwm.enableOutputDriverMode();
 }
@@ -148,6 +148,11 @@ void Hardware::setBtnCallback(void (*func)(boolean state)) {
 
 // **************************** PWM ****************************
 
+unsigned long channel[NUM_ROOMS][NUM_CHANNELS] = {
+  {0, 0, 0, 0},
+  {0, 0, 0, 0}
+};
+
 int channelNum;
 
 void ICACHE_FLASH_ATTR Hardware::setPWM(uint8_t channel, uint16_t value)
@@ -166,19 +171,25 @@ void ICACHE_FLASH_ATTR Hardware::setPWM(uint8_t channel, uint16_t value)
 
 void ICACHE_FLASH_ATTR Hardware::setChannel(int roomNum, int channelNum, unsigned long value)
 {
-  channel[roomNum][channelNum] = value;
+  channel[roomNum - 1][channelNum - 1] = value;
 }
 
-void ICACHE_FLASH_ATTR Hardware::updateChannels()
+String ICACHE_FLASH_ATTR Hardware::updateChannels()
 {
+  String status = "";
+
   for (uint8_t roomNum = 0; roomNum <  NUM_ROOMS; roomNum++) {
       for (uint8_t channelNum = 0; channelNum < NUM_CHANNELS; channelNum++ ) {
+        status += String(roomNum) + "," + channelNum + "," + channel[roomNum][channelNum] + ";";
+
         _pwm.setPWM((roomNum * NUM_CHANNELS) + channelNum, 0, channel[roomNum][channelNum]);
       }
    }
+
+   return status;
 }
 
-// **************************** RELAY ****************************
+// ************ RELAY *****************
 
 boolean relay1 = false;
 boolean relay2 = false;
@@ -203,7 +214,7 @@ void ICACHE_FLASH_ATTR Hardware::updateRelay()
      channel[0][3] == 0) {
     relay1 = false;
     _ticker_relay_1.detach();
-    _ticker_relay_1.once(60, &Hardware::_tick_relay_1);
+    _ticker_relay_1.once(5, &Hardware::_tick_relay_1);
    } else {
     relay1 = true;
    _ticker_relay_1.detach();
@@ -217,7 +228,7 @@ void ICACHE_FLASH_ATTR Hardware::updateRelay()
      channel[1][3] == 0) {
     relay2 = false;
     _ticker_relay_2.detach();
-    _ticker_relay_2.once(60, &Hardware::_tick_relay_2);
+    _ticker_relay_2.once(5, &Hardware::_tick_relay_2);
    } else {
    relay2 = true;
    _ticker_relay_2.detach();

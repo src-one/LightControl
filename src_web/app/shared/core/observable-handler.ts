@@ -15,68 +15,60 @@ import {ngOnDestroy} from './ng-on-destroy';
  *
  * Example code block:
  *
-
- ObservableHandler.from<MyModel[]>(this.page, this)
- .setApi(page => MyService.getData(page))
- .onPending(pending => this.data = pending)
- .subscribe();
-
+ *
+ * ObservableHandler.from<MyModel[]>(this.page, this)
+ * .setApi(page => MyService.getData(page))
+ * .onPending(pending => this.data = pending)
+ * .subscribe();
+ *
  *
  * Example angular2 component:
  *
-
- class MyService {
-     static getData(page: number): Observable<MyModel> {
-         return Observable.create(function(subscriber) {
-             subscriber.next([
-                 new MyModel(),
-                 new MyModel(),
-             ]);
-         }));
-     }
- }
-
- class MyModel {
-     name: string = 'foo';
- }
-
- @Component({
-        selector: 'my-component',
-        template: `
-            <div *ngIf="data?.pending">Loading ...</div>
-            <div *ngIf="data?.error">Couldn't Load Data</div>
-            <div *ngFor="let item of data?.response">{{ item.name }}</div>
-        `
-    })
- export class MyComponent implements OnInit {
-     public data: ObservablePending<MyModel[]>;
-     private page = new EventEmitter<number>();
-
-     ngOnInit() {
-         ObservableHandler.from<ProductReviewResponse>(this.page, this)
-             .setApi(page => MyService.getData(page))
-             .onPending(pending => this.data = pending)
-             .subscribe();
-
-         this.page.emit(1);
-     }
- }
-
+ *
+ * class MyService {
+ *     static getData(page: number): Observable<MyModel> {
+ *         return Observable.create(function(subscriber) {
+ *             subscriber.next([
+ *                 new MyModel(),
+ *                 new MyModel(),
+ *             ]);
+ *         }));
+ *     }
+ * }
+ *
+ * class MyModel {
+ *     name: string = 'foo';
+ * }
+ *
+ * @Component({
+ *        selector: 'my-component',
+ *        template: `
+ *            <div *ngIf="data?.pending">Loading ...</div>
+ *            <div *ngIf="data?.error">Couldn't Load Data</div>
+ *            <div *ngFor="let item of data?.response">{{ item.name }}</div>
+ *        `
+ *    })
+ * export class MyComponent implements OnInit {
+ *     public data: ObservablePending<MyModel[]>;
+ *     private page = new EventEmitter<number>();
+ *
+ *     ngOnInit() {
+ *         ObservableHandler.from<ProductReviewResponse>(this.page, this)
+ *             .setApi(page => MyService.getData(page))
+ *             .onPending(pending => this.data = pending)
+ *             .subscribe();
+ *
+ *         this.page.emit(1);
+ *     }
+ * }
+ *
  */
 
 const noop = function() {
 };
 
 export class ObservableHandler<T> {
-    private apiCallback: (value) => Observable<T>;
-    private pendingCallback: (pending) => any;
-    private errorCallback: (error, value) => any;
-    private retries: number = 0;
-    private input: Observable<any>;
-    private throttle: number = 0;
-    private component: OnDestroy;
-
-    static take<T>(value: any = null, component: {} = null) {
+    public static take<T>(value: any = null, component: {} = null) {
         const subject = new ReplaySubject(1);
         subject.next(value);
 
@@ -85,11 +77,27 @@ export class ObservableHandler<T> {
             .setComponent(component);
     }
 
-    static from<T>(input: Observable<any> = null, component: {} = null) {
+    public static from<T>(input: Observable<any> = null, component: {} = null) {
         return new ObservableHandler<T>()
             .setInput(input)
             .setComponent(component);
     }
+
+    public static getDelayedRetry(retries: number, delay: number, doNotRetryOnStatusCode: number[]) {
+        return (errors) => errors.scan(function(retry, error) {
+            if (retry >= retries || doNotRetryOnStatusCode.indexOf(error.status) !== -1) {
+                throw error;
+            }
+            return retry + 1;
+        }, 0).delay(delay);
+    }
+    private apiCallback: (value) => Observable<T>;
+    private pendingCallback: (pending) => any;
+    private errorCallback: (error, value) => any;
+    private retries: number = 0;
+    private input: Observable<any>;
+    private throttle: number = 0;
+    private component: OnDestroy;
 
     public testError(message: string = 'testError'): ObservableHandler<T> {
         return this.setApi(() => Observable.throw(new Error(message)));
@@ -105,7 +113,7 @@ export class ObservableHandler<T> {
     }
 
     public setComponent(component: {}): ObservableHandler<T> {
-        this.component = <OnDestroy>component;
+        this.component = component as OnDestroy;
         return this;
     }
 
@@ -134,20 +142,11 @@ export class ObservableHandler<T> {
         return this;
     }
 
-    static getDelayedRetry(retries: number, delay: number, doNotRetryOnStatusCode: number[]) {
-        return (errors) => errors.scan(function(retry, error) {
-            if (retry >= retries || doNotRetryOnStatusCode.indexOf(error.status) !== -1) {
-                throw error;
-            }
-            return retry + 1;
-        }, 0).delay(delay);
-    }
-
     public subscribe(subscriber: (value: T) => any = noop): Subscription {
         const destroy = new Subject<void>();
         const config = Object.assign({
             pendingCallback: noop,
-            errorCallback: noop
+            errorCallback: noop,
         }, this) as any;
 
         if (!this.apiCallback) {
@@ -170,7 +169,7 @@ export class ObservableHandler<T> {
             return config.apiCallback(next.value)
                 .takeUntil(destroy)
                 .retryWhen(ObservableHandler.getDelayedRetry(config.retries, 1500, [403, 409, 400, 404]))
-                .catch(next.onFail(error => config.errorCallback(error, next.value)))
+                .catch(next.onFail((error) => config.errorCallback(error, next.value)))
                 .do(next.done);
         });
 

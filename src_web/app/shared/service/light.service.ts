@@ -12,7 +12,7 @@ export class LightService {
 
     public getStatus(): Observable<Channel[]> {
         return this.http.get('/_api/channels')
-            .map(response => response.json());
+            .map((response) => response.json());
     }
 
     public setChannel(room: number, channel: number, value: number): Observable<Channel> {
@@ -21,7 +21,7 @@ export class LightService {
         const params = {};
 
         return this.http.post('/_api/channel', [payload], params)
-            .map(response => new Channel(response.json()));
+            .map((response) => new Channel(response.json()));
     }
 
     public setChannels(channels: Channel[]): Observable<Channels> {
@@ -37,6 +37,6 @@ export class LightService {
         //console.log(payload);
 
         return this.http.post('/_api/channel', payload, params)
-            .map(response => new Channels(response.json()));
+            .map((response) => new Channels(response.json()));
     }
 }

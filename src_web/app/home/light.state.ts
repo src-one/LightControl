@@ -7,6 +7,6 @@ export class LightState {
 
     public channels: Channel[][] = [
         [new Channel(), new Channel(), new Channel(), new Channel()],
-        [new Channel(), new Channel(), new Channel(), new Channel()]
+        [new Channel(), new Channel(), new Channel(), new Channel()],
     ];
 }

@@ -27,7 +27,7 @@ case "${ENVIRONMENT}" in
         rm -rf ./data/css/*.css
         rm -rf ./data/**/.DS_Store
 
-        if [ $TASK = "upload" ]; then
+        if [ "$TASK" = "upload" ]; then
             pio run -t uploadfs
         fi
     ;;

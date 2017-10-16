@@ -4,7 +4,7 @@ import {SettingsComponent} from './settings/settings.component';
 
 const routes: Routes = [
     {path: '', component: HomeComponent},
-    {path: 'settings', component: SettingsComponent}
+    {path: 'settings', component: SettingsComponent},
 ];
 
 export const routing = RouterModule.forRoot(routes);

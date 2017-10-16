@@ -15,7 +15,6 @@ export class WebSocketService {
         return this.subject;
     }
 
-
     public connectData(url: string): Subject<number> {
         if (!this.subjectData) {
             this.subjectData = this.createData(url);
@@ -24,9 +23,9 @@ export class WebSocketService {
     }
 
     private create(url: string): Subject<MessageEvent> {
-        let ws = new WebSocket(url);
+        const ws = new WebSocket(url);
 
-        let observable = Observable.create(
+        const observable = Observable.create(
             (obs: Observer<MessageEvent>) => {
                 ws.onmessage = obs.next.bind(obs);
                 ws.onerror = obs.error.bind(obs);
@@ -35,8 +34,8 @@ export class WebSocketService {
                 return ws.close.bind(ws);
             });
 
-        let observer = {
-            next: (data: Object) => {
+        const observer = {
+            next: (data: any) => {
                 if (ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify(data));
                 }
@@ -47,9 +46,9 @@ export class WebSocketService {
     }
 
     private createData(url: string): Subject<number> {
-        let ws = new WebSocket(url);
+        const ws = new WebSocket(url);
 
-        let observable = Observable.create(
+        const observable = Observable.create(
             (obs: Observer<number>) => {
                 ws.onmessage = obs.next.bind(obs);
                 ws.onerror = obs.error.bind(obs);
@@ -58,8 +57,8 @@ export class WebSocketService {
                 return ws.close.bind(ws);
             });
 
-        let observer = {
-            next: (data: Object) => {
+        const observer = {
+            next: (data: any) => {
                 if (ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify(data));
                 }

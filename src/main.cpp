@@ -1,7 +1,3 @@
-#define ENABLE_DEBUG_OUTPUT true
-#define DEBUG_HUE true
-
-#include <vector>
 #include <ESP8266WiFi.h>
 #include <DNSServer.h>
 #include <ArduinoOTA.h>
@@ -15,6 +11,9 @@
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 
+//#include <easyMesh.h>
+//#include <SimpleList.h>
+
 #include "AsyncJson.h"
 #include "ArduinoJson.h"
 
@@ -23,43 +22,55 @@
 #include "Hardware/Hardware.h"
 #include "Webserver/Webserver.h"
 
-#include "Upnp/hueESP.h"
-
-#include "helper/CrossFader.h"
-
 //#include "Tasks.h"
 
 Hardware hardware;
 Webserver webserver;
 
-hueESP hue(webserver.server);
+#define ENABLE_DEBUG_OUTPUT true
 
-const char * hostName = "lightcontrol";
+const char * hostName = "LightControl";
 
 bool debug = false;
 bool APMode = false;
 
 const char* ssid = "FuckingAwesomeNet";
 const char* password = "5bier10schnaps";
-
+//const char* ssid = "reBuy.com";
+//const char* password = "reBuy@Schoeneberg!";
 //const char* ssid = "FRITZ!Box 7490";
 //const char* password = "10schnaps1bier";
 
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(0x40);
+/*
+#define   MESH_PREFIX     "whateverYouLike"
+#define   MESH_PASSWORD   "somethingSneeky"
+#define   MESH_PORT       5555
+
+easyMesh  mesh;
+
+uint32_t sendMessageTime = 0;
 
 
-String onGetChannels(char data[]) {
-  String status = "";
-
-  for (uint8_t roomNum = 0; roomNum <  NUM_ROOMS; roomNum++) {
-      for (uint8_t channelNum = 0; channelNum < NUM_CHANNELS; channelNum++ ) {
-        status += String(roomNum) + "," + channelNum + "," + hardware.channel[roomNum][channelNum] + ";";
-      }
-   }
-
-   //Serial.println("{\"data\":\"" + status + "\"}");
-   return status;
+void receivedCallback( uint32_t from, String &msg ) {
+  Serial.printf("startHere: Received from %d msg=%s\n", from, msg.c_str());
 }
+
+void newConnectionCallback( bool adopt ) {
+  Serial.printf("startHere: New Connection, adopt=%d\n", adopt);
+}
+
+void attachMesh() {
+  //mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); // all types on
+    mesh.setDebugMsgTypes( ERROR | STARTUP );  // set before init() so that you can see startup messages
+
+    mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT );
+    mesh.setReceiveCallback( &receivedCallback );
+    mesh.setNewConnectionCallback( &newConnectionCallback );
+
+    randomSeed( analogRead( A0 ) );
+}
+*/
 
 void updateChannels(char payload[]) {
   StaticJsonBuffer<2048> jsonBuffer;
@@ -74,14 +85,14 @@ void updateChannels(char payload[]) {
     unsigned long value = data["value"];
 
     hardware.setChannel(roomNum, channelNum, value);
+    //Serial.printf("%d ; %d ; %d\n", roomNum, channelNum, value);
   }
 }
 
-void channelsTask() {
-   hardware.updateChannels();
-   hardware.updateRelay();
+void updateChannels() {
+   String status = hardware.updateChannels();
 
-   webserver.ws.textAll(onGetChannels(""));
+   //webserver.ws.textAll(status);
 }
 
 
@@ -95,6 +106,33 @@ public:
 protected:
     virtual void service() {
         ArduinoOTA.handle();
+        /*
+        mesh.update();
+
+        // run the blinky
+        bool  onFlag = false;
+        uint32_t cycleTime = mesh.getNodeTime() % 1000000;
+        for ( uint8_t i = 0; i < ( mesh.connectionCount() + 1); i++ ) {
+          uint32_t onTime = 100000 * i * 2;
+
+          if ( cycleTime > onTime && cycleTime < onTime + 100000 )
+            onFlag = true;
+        }
+        //digitalWrite(D4, onFlag);
+
+        // get next random time for send message
+        if ( sendMessageTime == 0 ) {
+          sendMessageTime = mesh.getNodeTime() + random( 1000000, 5000000 );
+        }
+
+        // if the time is ripe, send everyone a message!
+        if ( sendMessageTime != 0 && sendMessageTime < mesh.getNodeTime() ){
+          String msg = "Hello from node ";
+          msg += mesh.getChipId();
+          mesh.sendBroadcast( msg );
+          sendMessageTime = 0;
+        }
+        */
     }
 };
 
@@ -106,8 +144,6 @@ public:
 protected:
     virtual void service() {
       hardware.tick();
-      hue.handle();
-      //fauxmo.handle();
     }
 };
 
@@ -122,14 +158,15 @@ protected:
     }
 };
 
-class ChannelsEventProcess : public Process {
+class PWMEventProcess : public Process {
 public:
-    ChannelsEventProcess(Scheduler &manager, ProcPriority pr, unsigned int period, int iterations)
+    PWMEventProcess(Scheduler &manager, ProcPriority pr, unsigned int period, int iterations)
         :  Process(manager, pr, period, iterations) {}
 
 protected:
     virtual void service() {
-      channelsTask();
+      updateChannels();
+      hardware.updateRelay();
     }
 };
 
@@ -138,7 +175,7 @@ Scheduler sched;
 WebserverProcess webserverProc(sched, HIGH_PRIORITY, SERVICE_CONSTANTLY, RUNTIME_FOREVER);
 HardwareProcess hardwareProc(sched, HIGH_PRIORITY, SERVICE_CONSTANTLY, RUNTIME_FOREVER);
 TimedEventProcess timedEventProc(sched, LOW_PRIORITY, 1000, RUNTIME_FOREVER);
-ChannelsEventProcess channelsEventProc(sched, HIGH_PRIORITY, SERVICE_CONSTANTLY, 1);
+PWMEventProcess pwmEventProc(sched, HIGH_PRIORITY, SERVICE_CONSTANTLY, 1);
 
 void attachTasks() {
   hardwareProc.add();
@@ -150,14 +187,14 @@ void attachTasks() {
   timedEventProc.add();
   timedEventProc.enable();
 
-  channelsEventProc.add();
-  channelsEventProc.enable();
+  pwmEventProc.add();
+  pwmEventProc.enable();
 }
 
-void updateChannelsTask() {
-  channelsEventProc.restart();
-  channelsEventProc.setIterations(1);
-  channelsEventProc.enable();
+void updatePWMTask() {
+  pwmEventProc.restart();
+  pwmEventProc.setIterations(1);
+  pwmEventProc.enable();
 }
 
 // ------------------------ END Tasks ------------------------
@@ -244,8 +281,6 @@ void connectWiFi() {
 
   delay(2000);
 
-  int connectingRetries = 20;
-
   if(hardware.isButtonPressed()) {
     Serial.println("Begin WiFi Smart Config");
 
@@ -259,14 +294,6 @@ void connectWiFi() {
     while(WiFi.status() != WL_CONNECTED) {
       delay(500);
       Serial.print(".");
-
-      if(connectingRetries == 0) {
-        Serial.println("Restarting System, due to limit of WiFi connecting retries");
-
-        ESP.reset();
-      }
-
-      connectingRetries --;
 
       if(WiFi.smartConfigDone()) {
         Serial.println("WiFi Smart Config Done.");
@@ -293,19 +320,17 @@ void connectWiFi() {
   if (WiFi.SSID()) {
     Serial.println("Using last saved values, should be faster");
 
+/*
+    ETS_UART_INTR_DISABLE();
+    wifi_station_disconnect();
+    ETS_UART_INTR_ENABLE();
+*/
+
     WiFi.begin();
 
     while (WiFi.status() != WL_CONNECTED) {
       delay(500);
       Serial.print(".");
-
-      if(connectingRetries == 0) {
-        Serial.println("Restarting System, due to limit of WiFi connecting retries");
-
-        ESP.reset();
-      }
-
-      connectingRetries --;
     }
 
     Serial.println("");
@@ -324,7 +349,7 @@ void interruptGateway() {
 
 void onSetChannel(char data[]) {
   updateChannels(data);
-  updateChannelsTask();
+  updatePWMTask();
 }
 
 void setup() {
@@ -337,8 +362,12 @@ void setup() {
 
     connectWiFi();
     attachOta();
-    updateChannelsTask();
+    updatePWMTask();
 
+    //digitalWrite(D4, HIGH);
+    //digitalWrite(D5, LOW);
+
+    //server.begin();
     webserver.ws.onEvent(onWsEvent);
 
     webserver.onSetWebsocketText([](String payload) {
@@ -346,7 +375,6 @@ void setup() {
     });
 
     webserver.onSetChannels(onSetChannel);
-    webserver.onGetChannels(onGetChannels);
 
     webserver.init();
 
@@ -358,8 +386,7 @@ void setup() {
       Serial.println("Error setting up MDNS responder!");
     }
 
-
-    Serial.println("Webserver started");
+    Serial.println("Web-Server started");
 
     attachTasks();
     sched.run();
@@ -367,113 +394,11 @@ void setup() {
     hardware.setBtnCallback([](boolean state) {
       Serial.println(String("Button ") + String(state ? "pressed!" : "released!"));
       Serial.println(hardware.isButtonPressed() ? "_pressed!" : "_released!");
-    });
 
-    hue.setBridgeName("LightControl Bridge");
-
-    hue.addDevice("Decke vorne");
-    hue.addDevice("Decke hinten");
-    hue.addDevice("Tageslicht");
-    hue.addDevice("Partybeleuchtung");
-    hue.addDevice("ganze Beleuchtung");
-    hue.addDevice("coole Atmosphäre");
-
-    hue.onChangeDevice([](unsigned char deviceId, bool state, int brightness, rgbwcolor color) {
-        Serial.printf("[MAIN] Device #%d", deviceId);
-        Serial.printf(" STATE: %s", (state ? "on" : "off"));
-        Serial.printf(" BRIGHTNESS: %d", brightness);
-        Serial.printf(" RGBW: %d %d %d %d\n", color.r, color.g, color.b, color.w);
-
-        if(deviceId == 1 || deviceId == 2) {
-          if(state) {
-            if(true) {
-
-              hardware.setChannel(deviceId - 1, 0, map(color.r, 0, 255, 0, 4095));
-              hardware.setChannel(deviceId - 1, 1, map(color.g, 0, 255, 0, 4095));
-              hardware.setChannel(deviceId - 1, 2, map(color.b, 0, 255, 0, 4095));
-              hardware.setChannel(deviceId - 1, 3, map(color.w, 0, 255, 0, 4095));
-/*
-              hardware.setChannel(deviceId - 1, 0, color.r);
-              hardware.setChannel(deviceId - 1, 1, color.g);
-              hardware.setChannel(deviceId - 1, 2, color.b);
-              hardware.setChannel(deviceId - 1, 3, color.w);
-*/
-            } else {
-
-              hardware.setChannel(deviceId - 1, 0, map(color.w, 0, 255, 0, 4095));
-              hardware.setChannel(deviceId - 1, 1, map(color.b, 0, 255, 0, 4095));
-              hardware.setChannel(deviceId - 1, 2, map(color.g, 0, 255, 0, 4095));
-              hardware.setChannel(deviceId - 1, 3, map(color.r, 0, 255, 0, 4095));
-/*
-              hardware.setChannel(deviceId - 1, 0, color.w);
-              hardware.setChannel(deviceId - 1, 1, color.g);
-              hardware.setChannel(deviceId - 1, 2, color.b);
-              hardware.setChannel(deviceId - 1, 3, color.r);
-*/
-            }
-          } else {
-            hardware.setChannel(deviceId - 1, 0, 0);
-            hardware.setChannel(deviceId - 1, 1, 0);
-            hardware.setChannel(deviceId - 1, 2, 0);
-            hardware.setChannel(deviceId - 1, 3, 0);
-          }
-        }
-
-        if(deviceId == 3) {
-          int _brightness = map(brightness, 0, 255, 0, 4095);
-
-          hardware.setChannel(0, 0, state ? _brightness : 0);
-          hardware.setChannel(0, 1, 0);
-          hardware.setChannel(0, 2, 0);
-          hardware.setChannel(0, 3, 0);
-          hardware.setChannel(1, 0, state ? _brightness : 0);
-          hardware.setChannel(1, 1, 0);
-          hardware.setChannel(1, 2, 0);
-          hardware.setChannel(1, 3, 0);
-        }
-
-        if(deviceId == 4) {
-          int _brightness1 = map(brightness, 0, 255, 0, 1000);
-          int _brightness2 = map(brightness, 0, 255, 0, 600);
-
-          hardware.setChannel(0, 0, 0);
-          hardware.setChannel(0, 1, state ? _brightness1 : 0);
-          hardware.setChannel(0, 2, 0);
-          hardware.setChannel(0, 3, state ? _brightness2 : 0);
-          hardware.setChannel(1, 0, 0);
-          hardware.setChannel(1, 1, state ? _brightness1 : 0);
-          hardware.setChannel(1, 2, 0);
-          hardware.setChannel(1, 3, state ? _brightness2 : 0);
-        }
-
-        if(deviceId == 5) {
-          int _brightness = map(brightness, 0, 255, 0, 4095);
-
-          hardware.setChannel(0, 0, state ? _brightness : 0);
-          hardware.setChannel(0, 1, state ? _brightness : 0);
-          hardware.setChannel(0, 2, state ? _brightness : 0);
-          hardware.setChannel(0, 3, state ? _brightness : 0);
-          hardware.setChannel(1, 0, state ? _brightness : 0);
-          hardware.setChannel(1, 1, state ? _brightness : 0);
-          hardware.setChannel(1, 2, state ? _brightness : 0);
-          hardware.setChannel(1, 3, state ? _brightness : 0);
-        }
-
-        if(deviceId == 6) {
-          hardware.setChannel(0, 0, state ? 0 : 0);
-          hardware.setChannel(0, 1, state ? map(brightness, 0, 255, 0, 564) : 0);
-          hardware.setChannel(0, 2, state ? 0 : 0);
-          hardware.setChannel(0, 3, state ? map(brightness, 0, 255, 0, 4095) : 0);
-          hardware.setChannel(1, 0, state ? 0 : 0);
-          hardware.setChannel(1, 1, state ? map(brightness, 0, 255, 0, 4095) : 0);
-          hardware.setChannel(1, 2, state ? map(brightness, 0, 255, 0, 138) : 0);
-          hardware.setChannel(1, 3, state ? map(brightness, 0, 255, 0, 1976) : 0);
-        }
-
-        updateChannelsTask();
     });
 
     hardware.setYellowLed(true);
+    //hardware.setFan(true);
 }
 
 void loop() {

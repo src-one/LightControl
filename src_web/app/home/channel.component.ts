@@ -49,15 +49,16 @@ import {LightService} from '../shared/service/light.service';
                 <button class="btn btn-warning btn-block" (click)="setOff()">Off</button>
             </div>
         </div>
-    `
+    `,
 })
 export class ChannelComponent implements OnInit {
+    public currentTab: number = 0;
+
     private setChannelStream = new EventEmitter<ChannelDto>();
     private setChannelsStream = new EventEmitter<ChannelsDto>();
-    public stream: ObservablePending<Channel>;
-    public stream2: ObservablePending<Channels>;
-    public statusStream: ObservablePending<any>;
-    public currentTab: number = 0;
+    private stream: ObservablePending<Channel>;
+    private stream2: ObservablePending<Channels>;
+    private statusStream: ObservablePending<any>;
 
     constructor(private lightService: LightService,
                 public lightState: LightState) {
@@ -65,13 +66,13 @@ export class ChannelComponent implements OnInit {
 
     public ngOnInit() {
         ObservableHandler.from<Channel>(this.setChannelStream, this)
-            .setApi(data => this.lightService.setChannel(data.room, data.channel, data.value))
-            .onPending(pending => this.stream = pending)
+            .setApi((data) => this.lightService.setChannel(data.room, data.channel, data.value))
+            .onPending((pending) => this.stream = pending)
             .subscribe();
 
         ObservableHandler.from<Channels>(this.setChannelsStream, this)
-            .setApi(data => this.lightService.setChannels(data.channels))
-            .onPending(pending => this.stream2 = pending)
+            .setApi((data) => this.lightService.setChannels(data.channels))
+            .onPending((pending) => this.stream2 = pending)
             .subscribe();
         this.getChannelData();
     }
@@ -93,7 +94,7 @@ export class ChannelComponent implements OnInit {
             new Channel({room: 1, channel: 0, value: 100}),
             new Channel({room: 1, channel: 1, value: 0}),
             new Channel({room: 1, channel: 2, value: 0}),
-            new Channel({room: 1, channel: 3, value: 0})
+            new Channel({room: 1, channel: 3, value: 0}),
         ];
 
         this.setChannelsStream.emit({channels});
@@ -108,7 +109,7 @@ export class ChannelComponent implements OnInit {
             new Channel({room: 1, channel: 0, value: 0}),
             new Channel({room: 1, channel: 1, value: 250}),
             new Channel({room: 1, channel: 2, value: 0}),
-            new Channel({room: 1, channel: 3, value: 150})
+            new Channel({room: 1, channel: 3, value: 150}),
         ];
 
         this.setChannelsStream.emit({channels});
@@ -123,7 +124,7 @@ export class ChannelComponent implements OnInit {
             new Channel({room: 1, channel: 0, value: 0}),
             new Channel({room: 1, channel: 1, value: 4095}),
             new Channel({room: 1, channel: 2, value: 138}),
-            new Channel({room: 1, channel: 3, value: 1967})
+            new Channel({room: 1, channel: 3, value: 1967}),
         ];
 
         this.setChannelsStream.emit({channels});
@@ -138,7 +139,7 @@ export class ChannelComponent implements OnInit {
             new Channel({room: 1, channel: 0, value: 0}),
             new Channel({room: 1, channel: 1, value: 0}),
             new Channel({room: 1, channel: 2, value: 0}),
-            new Channel({room: 1, channel: 3, value: 0})
+            new Channel({room: 1, channel: 3, value: 0}),
         ];
 
         this.setChannelsStream.emit({channels});
@@ -152,15 +153,15 @@ export class ChannelComponent implements OnInit {
                 const channels: string[] = message.data.slice(0, -1).split(';');
 
                 try {
-                    if(channels.length > 0 && !this.lightState.isDragging) {
+                    if (channels.length > 0 && !this.lightState.isDragging) {
                         channels.map((channel) => {
                             const channelData = channel.split(',');
                             //console.log(channelData);
-                            this.lightState.channels[+channelData[0]][+channelData[1]] = new Channel(<ChannelDto>{
+                            this.lightState.channels[+channelData[0]][+channelData[1]] = new Channel({
                                 room: +channelData[0],
                                 channel: +channelData[1],
                                 value: +channelData[2],
-                            });
+                            } as ChannelDto);
                         });
                     } else {
                         //console.log("skip");

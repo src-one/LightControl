@@ -24,7 +24,7 @@ import {Component, AfterViewInit, ElementRef, Input, Output, EventEmitter, Chang
             />
             <div class="slider__caption">{{ caption || value || 0 }}</div>
         </div>
-    `
+    `,
 })
 
 export class SliderComponent implements AfterViewInit {
@@ -54,7 +54,7 @@ export class SliderComponent implements AfterViewInit {
     }
 
     public drag(): void {
-        if(this.interacting == false) {
+        if (this.interacting === false) {
             this.onInteract.emit(true);
             this.interacting = true;
         }

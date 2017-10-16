@@ -17,18 +17,17 @@ class Webserver
 
     void init();
 
-    void onGetChannels(String (*func)(char payload[]));
+    void onGetChannels(void (*func)(char payload[]));
     void onSetChannels(void (*func)(char payload[]));
     void onSetWebsocketText(void (*func)(String payload));
 
-    //AsyncWebServer server = AsyncWebServer(8080);
-    AsyncWebServer * server = new AsyncWebServer(80);
+    AsyncWebServer server = AsyncWebServer(80);
     AsyncWebSocket ws = AsyncWebSocket("/ws");
     AsyncEventSource events = AsyncEventSource("/events");
 
   private:
     void _apiGetChannels(char payload[]);
-    String (*_getChannelsCallback)(char payload[]) = NULL;
+    void (*_getChannelsCallback)(char payload[]) = NULL;
 
     void _apiSetChannels(char payload[]);
     void (*_setChannelsCallback)(char payload[]) = NULL;
@@ -38,6 +37,7 @@ class Webserver
 
     void _attachFileServer();
     void _attachApiSetChannelsEndpoint();
+    //void _attachApiSetBarcodeEndpoint();
     void _attachApiGetChannelsEndpoint();
     void _attachApiGetHeapEndpoint();
     void _attachWebsocketListener();

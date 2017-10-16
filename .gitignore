@@ -5,3 +5,4 @@
 node_modules
 .pio_home
 .idea
+.vscode/c_cpp_properties.json
